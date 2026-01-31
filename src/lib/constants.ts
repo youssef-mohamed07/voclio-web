@@ -1,12 +1,15 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// Use the Next.js proxy route to avoid CORS issues
+export const API_BASE_URL = '/api/proxy';
 
 export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/admin',
   USERS: '/admin/users',
+  ANALYTICS: '/admin/analytics',
   API_USAGE: '/admin/api-usage',
   API_KEYS: '/admin/api-keys',
   LOGS: '/admin/logs',
+  SYSTEM: '/admin/system',
   CONFIG: '/admin/config',
 } as const;
 

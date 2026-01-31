@@ -1,3 +1,5 @@
+'use client';
+
 import AdminShell from '@/components/layout/AdminShell';
 import { ToastProvider } from '@/components/ui/Toast';
 

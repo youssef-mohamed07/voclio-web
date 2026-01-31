@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from '@/lib/auth';
-import { API_BASE_URL } from '@/lib/constants';
+
+// Backend API URL (server-side only)
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3001/api';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return proxyRequest(request, await params);
@@ -26,7 +28,9 @@ async function proxyRequest(request: NextRequest, params: { path: string[] }) {
   }
 
   const path = params.path.join('/');
-  const url = `${API_BASE_URL}/${path}`;
+  const searchParams = request.nextUrl.searchParams.toString();
+  const queryString = searchParams ? `?${searchParams}` : '';
+  const url = `${BACKEND_API_URL}/${path}${queryString}`;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',

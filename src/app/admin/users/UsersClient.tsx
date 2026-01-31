@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { User, PaginatedResponse } from '@/lib/types';
 import { SUBSCRIPTION_TIERS, ROUTES } from '@/lib/constants';
+import { updateUserStatus, updateUserRole, bulkDeleteUsers } from '@/services/users';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -34,7 +35,9 @@ export default function UsersClient({ initialData, initialError, initialFilters 
   const [search, setSearch] = useState(initialFilters.search);
   const [tier, setTier] = useState(initialFilters.subscription_tier);
   const [active, setActive] = useState(initialFilters.is_active);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
+  const [bulkDeleteModal, setBulkDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const updateFilters = (updates: Record<string, string>) => {
@@ -75,6 +78,36 @@ export default function UsersClient({ initialData, initialError, initialFilters 
     }
   };
 
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token') || '';
+      await bulkDeleteUsers(token, selectedUsers);
+      showToast('success', `Deleted ${selectedUsers.length} users successfully`);
+      setSelectedUsers([]);
+      setBulkDeleteModal(false);
+      router.refresh();
+    } catch (error: any) {
+      showToast('error', error.message || 'Failed to delete users');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleAllUsers = () => {
+    if (selectedUsers.length === initialData?.data.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(initialData?.data.map(u => u.id) || []);
+    }
+  };
+
   const tierBadgeVariant = (t: string): 'default' | 'info' | 'purple' | 'gradient' => {
     const variants: Record<string, 'default' | 'info' | 'purple' | 'gradient'> = {
       free: 'default', basic: 'info', pro: 'purple', enterprise: 'gradient',
@@ -89,12 +122,22 @@ export default function UsersClient({ initialData, initialError, initialFilters 
           <h1 className="text-3xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-500 mt-1">Manage user accounts and subscriptions</p>
         </div>
-        <Button variant="gradient">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add User
-        </Button>
+        <div className="flex gap-2">
+          {selectedUsers.length > 0 && (
+            <Button variant="danger" onClick={() => setBulkDeleteModal(true)}>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete ({selectedUsers.length})
+            </Button>
+          )}
+          <Button variant="gradient">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add User
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -151,12 +194,32 @@ export default function UsersClient({ initialData, initialError, initialFilters 
         </Card>
       ) : initialData?.data?.length ? (
         <>
+          <Card hover>
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                type="checkbox"
+                checked={selectedUsers.length === initialData.data.length}
+                onChange={toggleAllUsers}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <span className="text-sm text-gray-600">
+                {selectedUsers.length > 0 ? `${selectedUsers.length} selected` : 'Select all'}
+              </span>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {initialData.data.map((user) => (
               <Card key={user.id} hover className="!p-0 overflow-hidden">
                 <div className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      />
                       <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                         <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -175,6 +238,7 @@ export default function UsersClient({ initialData, initialError, initialFilters 
                     <Badge variant={tierBadgeVariant(user.subscription_tier)}>
                       {user.subscription_tier}
                     </Badge>
+                    {user.is_admin && <Badge variant="gradient">Admin</Badge>}
                     <span className="text-xs text-gray-400">•</span>
                     <span className="text-xs text-gray-500">{user.api_calls_count?.toLocaleString() || 0} API calls</span>
                   </div>
@@ -221,6 +285,15 @@ export default function UsersClient({ initialData, initialError, initialFilters 
         onConfirm={handleDelete}
         title="Delete User"
         message={`Are you sure you want to delete ${deleteModal.user?.name}? This action cannot be undone.`}
+        loading={deleting}
+      />
+
+      <ConfirmModal
+        isOpen={bulkDeleteModal}
+        onClose={() => setBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Multiple Users"
+        message={`Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`}
         loading={deleting}
       />
     </div>

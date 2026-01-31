@@ -200,3 +200,15 @@ body {
   background: linear-gradient(180deg, #8B5CF6, #6D28D9);
   border-radius: 0 4px 4px 0;
 }
+
+/* Toast slide-in animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
