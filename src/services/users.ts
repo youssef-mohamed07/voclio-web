@@ -1,6 +1,5 @@
 import { apiFetch, buildQueryString } from './api';
 import { User, PaginatedResponse, UserDetailsResponse } from '@/lib/types';
-import { mockUsers, paginateMockData } from '@/lib/mock-data';
 
 interface UsersParams {
   page?: number;
@@ -13,116 +12,133 @@ interface UsersParams {
   is_active?: boolean;
 }
 
+interface BackendUsersResponse {
+  data: Array<{
+    user_id: number;
+    email: string;
+    name: string;
+    phone_number?: string;
+    is_active: boolean;
+    email_verified?: boolean;
+    is_admin?: boolean;
+    oauth_provider?: string;
+    created_at: string;
+    updated_at?: string;
+    notes_count?: number;
+    tasks_count?: number;
+    recordings_count?: number;
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
 export async function getUsers(token: string, params: UsersParams = {}): Promise<PaginatedResponse<User>> {
-  try {
-    const query = buildQueryString({
-      page: params.page || 1,
-      limit: params.limit || 10,
-      search: params.search,
-      status: params.status,
-      sortBy: params.sortBy,
-      order: params.order,
-      subscription_tier: params.subscription_tier,
-      is_active: params.is_active,
-    });
-    return await apiFetch<PaginatedResponse<User>>(`/admin/users${query}`, { token });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    let filteredUsers = mockUsers;
-    if (params.search) {
-      filteredUsers = mockUsers.filter(u => 
-        u.name.toLowerCase().includes(params.search!.toLowerCase()) || 
-        u.email.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-    if (params.is_active !== undefined) {
-      filteredUsers = filteredUsers.filter(u => u.is_active === params.is_active);
-    }
-    if (params.subscription_tier) {
-      filteredUsers = filteredUsers.filter(u => u.subscription_tier === params.subscription_tier);
-    }
-    return paginateMockData(filteredUsers, params.page || 1, params.limit || 10);
+  const query = buildQueryString({
+    page: params.page || 1,
+    limit: params.limit || 10,
+    search: params.search,
+    status: params.status,
+    sortBy: params.sortBy,
+    order: params.order,
+  });
+  
+  const response = await apiFetch<BackendUsersResponse>(`/admin/users${query}`, { token });
+  
+  // Check if response has the expected structure
+  if (!response || !response.data || !Array.isArray(response.data)) {
+    throw new Error('Invalid response from server');
   }
+  
+  // Transform backend response to frontend format
+  return {
+    data: response.data.map(user => ({
+      id: String(user.user_id),
+      user_id: user.user_id,
+      email: user.email,
+      name: user.name,
+      phone_number: user.phone_number,
+      subscription_tier: 'free' as const,
+      is_active: user.is_active,
+      email_verified: user.email_verified,
+      is_admin: user.is_admin,
+      oauth_provider: user.oauth_provider,
+      created_at: user.created_at,
+      updated_at: user.updated_at || user.created_at,
+      notes_count: user.notes_count,
+      tasks_count: user.tasks_count,
+      recordings_count: user.recordings_count,
+    })),
+    total: response.pagination.total,
+    page: response.pagination.page,
+    limit: response.pagination.limit,
+    total_pages: Math.ceil(response.pagination.total / response.pagination.limit),
+  };
 }
 
 export async function getUser(token: string, id: string): Promise<User> {
-  try {
-    return await apiFetch<User>(`/admin/users/${id}`, { token });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    const user = mockUsers.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return user;
-  }
+  const response = await apiFetch<{ user: any }>(`/admin/users/${id}`, { token });
+  const user = response.user;
+  
+  return {
+    id: String(user.user_id),
+    user_id: user.user_id,
+    email: user.email,
+    name: user.name,
+    phone_number: user.phone_number,
+    subscription_tier: 'free' as const,
+    is_active: user.is_active,
+    email_verified: user.email_verified,
+    is_admin: user.is_admin,
+    oauth_provider: user.oauth_provider,
+    created_at: user.created_at,
+    updated_at: user.updated_at || user.created_at,
+  };
 }
 
 export async function getUserDetails(token: string, id: string): Promise<UserDetailsResponse> {
-  try {
-    return await apiFetch<UserDetailsResponse>(`/admin/users/${id}`, { token });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    const user = mockUsers.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return {
-      user,
-      statistics: {
-        total_notes: user.notes?.length || 0,
-        total_tasks: user.tasks?.length || 0,
-        completed_tasks: user.tasks?.filter(t => t.status === 'completed').length || 0,
-        total_recordings: 0,
-        total_reminders: 0,
-        total_tags: 0,
-        total_categories: 0,
-        focus_sessions: 0,
-        total_focus_time: 0,
-        active_sessions: 0,
-      },
-      recent_activity: {
-        notes: user.notes?.map(n => ({ note_id: parseInt(n.id), title: n.title, created_at: n.created_at })) || [],
-        tasks: user.tasks?.map(t => ({ task_id: parseInt(t.id.substring(1)), title: t.title, status: t.status, created_at: t.created_at })) || [],
-        recordings: [],
-      },
-    };
+  const response = await apiFetch<any>(`/admin/users/${id}`, { token });
+  // Handle both wrapped and unwrapped responses
+  if (response.data) {
+    return response.data;
   }
+  return response;
 }
 
 export async function updateUser(token: string, id: string, data: Partial<User>): Promise<User> {
-  try {
-    return await apiFetch<User>(`/admin/users/${id}`, {
-      token,
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    const user = mockUsers.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return { ...user, ...data };
-  }
+  const response = await apiFetch<{ user: any }>(`/admin/users/${id}`, {
+    token,
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  
+  const user = response.user;
+  return {
+    id: String(user.user_id),
+    user_id: user.user_id,
+    email: user.email,
+    name: user.name,
+    subscription_tier: 'free' as const,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at || user.created_at,
+  };
 }
 
 export async function deleteUser(token: string, id: string): Promise<void> {
-  try {
-    return await apiFetch<void>(`/admin/users/${id}`, {
-      token,
-      method: 'DELETE',
-    });
-  } catch (error) {
-    console.warn('API failed, simulating delete:', error);
-    return Promise.resolve();
-  }
+  return apiFetch<void>(`/admin/users/${id}`, {
+    token,
+    method: 'DELETE',
+  });
 }
 
 export async function resetUserPassword(token: string, id: string): Promise<{ message: string }> {
-  try {
-    return await apiFetch<{ message: string }>(`/admin/users/${id}/reset-password`, {
-      token,
-      method: 'POST',
-    });
-  } catch (error) {
-    console.warn('API failed, using mock response:', error);
-    return { message: 'Password reset email sent successfully' };
-  }
+  return apiFetch<{ message: string }>(`/admin/users/${id}/reset-password`, {
+    token,
+    method: 'POST',
+  });
 }
 
 export async function updateUserStatus(
@@ -130,18 +146,23 @@ export async function updateUserStatus(
   id: string,
   is_active: boolean
 ): Promise<User> {
-  try {
-    return await apiFetch<User>(`/admin/users/${id}/status`, {
-      token,
-      method: 'PUT',
-      body: JSON.stringify({ is_active }),
-    });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    const user = mockUsers.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return { ...user, is_active };
-  }
+  const response = await apiFetch<{ user: any }>(`/admin/users/${id}/status`, {
+    token,
+    method: 'PUT',
+    body: JSON.stringify({ is_active }),
+  });
+  
+  const user = response.user;
+  return {
+    id: String(user.user_id),
+    user_id: user.user_id,
+    email: user.email,
+    name: user.name,
+    subscription_tier: 'free' as const,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at || user.created_at,
+  };
 }
 
 export async function updateUserRole(
@@ -149,32 +170,33 @@ export async function updateUserRole(
   id: string,
   is_admin: boolean
 ): Promise<User> {
-  try {
-    return await apiFetch<User>(`/admin/users/${id}/role`, {
-      token,
-      method: 'PUT',
-      body: JSON.stringify({ is_admin }),
-    });
-  } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    const user = mockUsers.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return { ...user };
-  }
+  const response = await apiFetch<{ user: any }>(`/admin/users/${id}/role`, {
+    token,
+    method: 'PUT',
+    body: JSON.stringify({ is_admin }),
+  });
+  
+  const user = response.user;
+  return {
+    id: String(user.user_id),
+    user_id: user.user_id,
+    email: user.email,
+    name: user.name,
+    subscription_tier: 'free' as const,
+    is_active: user.is_active,
+    is_admin: user.is_admin,
+    created_at: user.created_at,
+    updated_at: user.updated_at || user.created_at,
+  };
 }
 
 export async function bulkDeleteUsers(
   token: string,
   userIds: string[]
 ): Promise<{ message: string; deleted_count: number }> {
-  try {
-    return await apiFetch(`/admin/users/bulk-delete`, {
-      token,
-      method: 'POST',
-      body: JSON.stringify({ userIds }),
-    });
-  } catch (error) {
-    console.warn('API failed, using mock response:', error);
-    return { message: 'Users deleted successfully', deleted_count: userIds.length };
-  }
+  return apiFetch(`/admin/users/bulk-delete`, {
+    token,
+    method: 'POST',
+    body: JSON.stringify({ userIds: userIds.map(id => parseInt(id)) }),
+  });
 }

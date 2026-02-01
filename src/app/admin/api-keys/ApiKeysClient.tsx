@@ -13,16 +13,15 @@ import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 
 interface ApiKeysClientProps {
-  initialData: PaginatedResponse<ApiKey> | null;
-  initialError: string | null;
   currentPage: number;
 }
 
-export default function ApiKeysClient({ initialData, initialError, currentPage }: ApiKeysClientProps) {
+export default function ApiKeysClient({ currentPage }: ApiKeysClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
 
+  const [data, setData] = useState<PaginatedResponse<ApiKey> | null>(null);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState<{ open: boolean; key: ApiKey | null }>({ open: false, key: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; key: ApiKey | null }>({ open: false, key: null });
@@ -122,18 +121,13 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
         </Button>
       </div>
 
-      {initialError ? (
+      {!data ? (
         <Card className="text-center py-12">
-          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-red-500">{initialError}</p>
+          <p className="text-gray-500">Loading API keys...</p>
         </Card>
-      ) : initialData?.data?.length ? (
+      ) : data?.data?.length ? (
         <div className="grid gap-4">
-          {initialData.data.map((key) => (
+          {data.data.map((key) => (
             <Card key={key.id} hover className="!p-0">
               <div className="p-5">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -196,13 +190,13 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
             </Card>
           ))}
           
-          {initialData.total_pages > 1 && (
+          {data.total_pages > 1 && (
             <Card>
               <Pagination
                 currentPage={currentPage}
-                totalPages={initialData.total_pages}
-                totalItems={initialData.total}
-                itemsPerPage={initialData.limit}
+                totalPages={data.total_pages}
+                totalItems={data.total}
+                itemsPerPage={data.limit}
                 onPageChange={handlePageChange}
               />
             </Card>

@@ -9,17 +9,14 @@ import Input from '@/components/ui/Input';
 import Toggle from '@/components/ui/Toggle';
 import { useToast } from '@/components/ui/Toast';
 
-interface ConfigClientProps {
-  initialData: AppConfig[] | null;
-  initialError: string | null;
-}
+interface ConfigClientProps {}
 
-export default function ConfigClient({ initialData, initialError }: ConfigClientProps) {
+export default function ConfigClient({}: ConfigClientProps = {}) {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [configs, setConfigs] = useState<AppConfig[]>(initialData || []);
-  const [originalConfigs] = useState<AppConfig[]>(initialData || []);
+  const [configs, setConfigs] = useState<AppConfig[]>([]);
+  const [originalConfigs] = useState<AppConfig[]>([]);
   const [saving, setSaving] = useState(false);
 
   const hasChanges = JSON.stringify(configs) !== JSON.stringify(originalConfigs);
@@ -86,20 +83,6 @@ export default function ConfigClient({ initialData, initialError }: ConfigClient
         );
     }
   };
-
-  if (initialError) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Configuration</h1>
-          <p className="text-gray-500 mt-1">Manage application settings</p>
-        </div>
-        <Card>
-          <div className="text-center text-red-500 py-8">{initialError}</div>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

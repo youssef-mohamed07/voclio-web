@@ -1,13 +1,68 @@
-import { mockApiUsage, mockUsers, mockLogs, paginateMockData } from '@/lib/mock-data';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Card, { CardTitle, StatCard } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
+import { getToken } from '@/lib/auth';
+import { getSystemAnalytics } from '@/services/analytics';
+import { getUsers } from '@/services/users';
+import { getActivityLogs } from '@/services/system';
+import { SystemAnalytics, User, ActivityLog } from '@/lib/types';
+import Spinner from '@/components/ui/Spinner';
 
 export default function DashboardPage() {
-  const apiUsage = mockApiUsage;
-  const usersData = paginateMockData(mockUsers, 1, 5);
-  const logsData = paginateMockData(mockLogs, 1, 5);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<SystemAnalytics | null>(null);
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [recentLogs, setRecentLogs] = useState<ActivityLog[]>([]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      router.push(ROUTES.LOGIN);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [analyticsData, usersData, logsData] = await Promise.all([
+          getSystemAnalytics(token),
+          getUsers(token, { page: 1, limit: 5, sortBy: 'created_at', order: 'DESC' }),
+          getActivityLogs(token, { page: 1, limit: 5 }),
+        ]);
+
+        setAnalytics(analyticsData);
+        setRecentUsers(usersData.data);
+        setRecentLogs(logsData.data);
+      } catch (error) {
+        router.push(ROUTES.LOGIN);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-gray-500">Failed to load dashboard data</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -36,97 +91,116 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Requests"
-          value={apiUsage.total_requests.toLocaleString()}
-          change="+12.5% from last month"
-          changeType="positive"
-          icon={<RequestsIcon className="w-6 h-6" />}
-          gradient="purple"
-        />
-        <StatCard
-          title="Success Rate"
-          value={`${apiUsage.success_rate.toFixed(1)}%`}
-          change="+2.1% from last month"
-          changeType="positive"
-          icon={<SuccessIcon className="w-6 h-6" />}
-          gradient="green"
-        />
-        <StatCard
           title="Total Users"
-          value={usersData.total.toLocaleString()}
+          value={analytics.overview.total_users.toLocaleString()}
           change="+8.3% from last month"
           changeType="positive"
           icon={<UsersIcon className="w-6 h-6" />}
           gradient="blue"
         />
         <StatCard
-          title="Total Errors"
-          value={apiUsage.total_errors.toLocaleString()}
-          change="-5.2% from last month"
+          title="Active Users"
+          value={analytics.overview.active_users.toLocaleString()}
+          change="+5.2% from last month"
+          changeType="positive"
+          icon={<SuccessIcon className="w-6 h-6" />}
+          gradient="green"
+        />
+        <StatCard
+          title="Total Notes"
+          value={analytics.overview.total_notes.toLocaleString()}
+          change="+12.5% from last month"
+          changeType="positive"
+          icon={<RequestsIcon className="w-6 h-6" />}
+          gradient="purple"
+        />
+        <StatCard
+          title="Total Tasks"
+          value={analytics.overview.total_tasks.toLocaleString()}
+          change="+7.8% from last month"
           changeType="positive"
           icon={<ErrorsIcon className="w-6 h-6" />}
           gradient="red"
         />
       </div>
 
-      {/* Charts Row */}
+      {/* Stats Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2" hover>
-          <div className="flex items-center justify-between mb-6">
-            <CardTitle>API Usage Overview</CardTitle>
-            <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-            </select>
-          </div>
-          <div className="h-64 flex items-end justify-between gap-3 px-4">
-            {[
-              { day: 'Mon', value: 6500, requests: '6.5K' },
-              { day: 'Tue', value: 8000, requests: '8K' },
-              { day: 'Wed', value: 4500, requests: '4.5K' },
-              { day: 'Thu', value: 9000, requests: '9K' },
-              { day: 'Fri', value: 7000, requests: '7K' },
-              { day: 'Sat', value: 5500, requests: '5.5K' },
-              { day: 'Sun', value: 8500, requests: '8.5K' },
-            ].map((item) => {
-              const maxValue = 10000;
-              const heightPercent = (item.value / maxValue) * 100;
-              return (
-                <div key={item.day} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-xs font-medium text-gray-600">{item.requests}</span>
-                  <div className="w-full h-48 bg-gray-100 rounded-lg relative overflow-hidden flex items-end">
-                    <div 
-                      className="w-full bg-gradient-to-t from-[#6D28D9] to-[#8B5CF6] rounded-lg transition-all duration-500"
-                      style={{ height: `${heightPercent}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500">{item.day}</span>
-                </div>
-              );
-            })}
+        <Card hover>
+          <CardTitle>Content Statistics</CardTitle>
+          <div className="mt-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Recordings</span>
+              <span className="font-semibold text-gray-900">{analytics.overview.total_recordings.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Notes</span>
+              <span className="font-semibold text-gray-900">{analytics.overview.total_notes.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Tasks</span>
+              <span className="font-semibold text-gray-900">{analytics.overview.total_tasks.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Completed Tasks</span>
+              <span className="font-semibold text-gray-900">{analytics.overview.completed_tasks.toLocaleString()}</span>
+            </div>
           </div>
         </Card>
 
         <Card hover>
-          <CardTitle>Traffic Sources</CardTitle>
+          <CardTitle>User Statistics</CardTitle>
           <div className="mt-6 space-y-4">
-            {[
-              { name: 'Direct', value: 45, color: 'bg-purple-500' },
-              { name: 'API', value: 30, color: 'bg-blue-500' },
-              { name: 'Referral', value: 15, color: 'bg-green-500' },
-              { name: 'Social', value: 10, color: 'bg-orange-500' },
-            ].map((source) => (
-              <div key={source.name}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{source.name}</span>
-                  <span className="font-semibold text-gray-900">{source.value}%</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full ${source.color} rounded-full transition-all duration-500`} style={{ width: `${source.value}%` }} />
-                </div>
-              </div>
-            ))}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Users</span>
+              <span className="font-semibold text-gray-900">{analytics.overview.total_users.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Active Users</span>
+              <span className="font-semibold text-green-600">{analytics.overview.active_users.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Inactive Users</span>
+              <span className="font-semibold text-gray-500">{analytics.overview.inactive_users.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Activity Rate</span>
+              <span className="font-semibold text-purple-600">
+                {analytics.overview.total_users > 0 ? ((analytics.overview.active_users / analytics.overview.total_users) * 100).toFixed(1) : 0}%
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card hover>
+          <CardTitle>System Overview</CardTitle>
+          <div className="mt-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Content</span>
+              <span className="font-semibold text-gray-900">
+                {(analytics.overview.total_notes + analytics.overview.total_tasks + analytics.overview.total_recordings).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Avg per User</span>
+              <span className="font-semibold text-gray-900">
+                {analytics.overview.total_users > 0 
+                  ? ((analytics.overview.total_notes + analytics.overview.total_tasks + analytics.overview.total_recordings) / analytics.overview.total_users).toFixed(1)
+                  : 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Notes per User</span>
+              <span className="font-semibold text-blue-600">
+                {analytics.overview.total_users > 0 ? (analytics.overview.total_notes / analytics.overview.total_users).toFixed(1) : 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Tasks per User</span>
+              <span className="font-semibold text-orange-600">
+                {analytics.overview.total_users > 0 ? (analytics.overview.total_tasks / analytics.overview.total_users).toFixed(1) : 0}
+              </span>
+            </div>
           </div>
         </Card>
       </div>
@@ -141,24 +215,28 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {usersData.data.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-purple-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+            {recentUsers.length > 0 ? (
+              recentUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-purple-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
-                  </div>
+                  <Badge variant={user.is_active ? 'success' : 'error'} dot>
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
-                <Badge variant={user.is_active ? 'success' : 'error'} dot>
-                  {user.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No users found</p>
+            )}
           </div>
         </Card>
 
@@ -171,20 +249,24 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {logsData.data.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-purple-50 transition-colors">
-                <SeverityIcon severity={log.severity} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 truncate">{log.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(log.created_at).toLocaleString()}
-                  </p>
+            {recentLogs.length > 0 ? (
+              recentLogs.map((log, index) => (
+                <div key={`${log.timestamp}-${index}`} className="flex items-start gap-3 p-3 rounded-xl hover:bg-purple-50 transition-colors">
+                  <ActivityIcon action={log.type} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 truncate">{log.type}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {log.user.email || 'System'} • {new Date(log.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <Badge variant="info" size="sm">
+                    {log.type.split('_')[0]}
+                  </Badge>
                 </div>
-                <Badge variant={getSeverityVariant(log.severity)} size="sm">
-                  {log.severity}
-                </Badge>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No activity logs found</p>
+            )}
           </div>
         </Card>
       </div>
@@ -192,29 +274,23 @@ export default function DashboardPage() {
   );
 }
 
-function getSeverityVariant(severity: string): 'info' | 'warning' | 'error' | 'default' {
-  const variants: Record<string, 'info' | 'warning' | 'error'> = {
-    info: 'info',
-    warning: 'warning',
-    error: 'error',
-    critical: 'error',
-  };
-  return variants[severity] || 'default';
-}
-
-function SeverityIcon({ severity }: { severity: string }) {
+function ActivityIcon({ action }: { action: string }) {
   const colors: Record<string, string> = {
-    info: 'bg-blue-100 text-blue-600',
-    warning: 'bg-yellow-100 text-yellow-600',
-    error: 'bg-red-100 text-red-600',
-    critical: 'bg-red-100 text-red-600',
+    user: 'bg-blue-100 text-blue-600',
+    note: 'bg-green-100 text-green-600',
+    task: 'bg-orange-100 text-orange-600',
+    recording: 'bg-purple-100 text-purple-600',
+    default: 'bg-gray-100 text-gray-600',
   };
+
+  const actionType = action.toLowerCase().split('_')[0];
+  const colorClass = colors[actionType] || colors.default;
 
   return (
-    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors[severity] || 'bg-gray-100 text-gray-600'}`}>
-      {severity === 'info' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-      {severity === 'warning' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-      {(severity === 'error' || severity === 'critical') && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorClass}`}>
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
     </div>
   );
 }

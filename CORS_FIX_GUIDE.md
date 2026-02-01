@@ -22,12 +22,16 @@ export const API_BASE_URL = '/api/proxy';
 
 ### Proxy (src/app/api/proxy/[...path]/route.ts)
 ```typescript
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3001/api';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://voclio-backend.build8.dev/api';
 ```
 
-### Environment (.env.local)
+### Environment (.env.local or .env.production)
 ```
-BACKEND_API_URL=http://localhost:3001/api
+# For production (default):
+BACKEND_API_URL=https://voclio-backend.build8.dev/api
+
+# For local development:
+# BACKEND_API_URL=http://localhost:3001/api
 ```
 
 ## Fallback Mock Data
@@ -69,8 +73,11 @@ The app will work with mock data until the backend is available.
 
 ### Want to use real API?
 
-1. Ensure backend is running on `http://localhost:3001`
-2. Backend should have endpoints like `/api/admin/users`, `/api/admin/analytics`, etc.
+1. The app is now configured to use the production backend: `https://voclio-backend.build8.dev/api`
+2. For local development, update `.env.local`:
+   ```
+   BACKEND_API_URL=http://localhost:3001/api
+   ```
 3. Restart Next.js dev server
 4. Refresh browser
 

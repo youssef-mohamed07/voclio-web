@@ -12,8 +12,6 @@ import Badge from '@/components/ui/Badge';
 import Pagination from '@/components/tables/Pagination';
 
 interface LogsClientProps {
-  initialData: PaginatedResponse<Log> | null;
-  initialError: string | null;
   initialFilters: {
     page: number;
     activity_type: string;
@@ -23,10 +21,12 @@ interface LogsClientProps {
   };
 }
 
-export default function LogsClient({ initialData, initialError, initialFilters }: LogsClientProps) {
+export default function LogsClient({ initialFilters }: LogsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  const [data, setData] = useState<PaginatedResponse<Log> | null>(null);
 
   const [activityType, setActivityType] = useState(initialFilters.activity_type);
   const [severity, setSeverity] = useState(initialFilters.severity);
@@ -129,18 +129,13 @@ export default function LogsClient({ initialData, initialError, initialFilters }
       </Card>
 
       {/* Logs */}
-      {initialError ? (
+      {!data ? (
         <Card className="text-center py-12">
-          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-red-500">{initialError}</p>
+          <p className="text-gray-500">Loading logs...</p>
         </Card>
-      ) : initialData?.data?.length ? (
+      ) : data?.data?.length ? (
         <div className="space-y-3">
-          {initialData.data.map((log) => {
+          {data.data.map((log) => {
             const severityConfig = getSeverityConfig(log.severity);
             return (
               <Card key={log.id} hover className="!p-0">
@@ -189,13 +184,13 @@ export default function LogsClient({ initialData, initialError, initialFilters }
             );
           })}
 
-          {initialData.total_pages > 1 && (
+          {data.total_pages > 1 && (
             <Card>
               <Pagination
-                currentPage={initialData.page}
-                totalPages={initialData.total_pages}
-                totalItems={initialData.total}
-                itemsPerPage={initialData.limit}
+                currentPage={data.page}
+                totalPages={data.total_pages}
+                totalItems={data.total}
+                itemsPerPage={data.limit}
                 onPageChange={handlePageChange}
               />
             </Card>

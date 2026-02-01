@@ -1,182 +1,169 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getSystemAnalytics, getAIUsageAnalytics, getContentStatistics } from '@/services/analytics';
 import { SystemAnalytics, AIUsageAnalytics, ContentStatistics } from '@/lib/types';
 import Card, { CardTitle, StatCard } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import Spinner from '@/components/ui/Spinner';
-import { useToast } from '@/components/ui/Toast';
 
-export default function AnalyticsClient() {
-  const { showToast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [systemData, setSystemData] = useState<SystemAnalytics | null>(null);
-  const [aiData, setAIData] = useState<AIUsageAnalytics | null>(null);
-  const [contentData, setContentData] = useState<ContentStatistics | null>(null);
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
-  });
+interface AnalyticsClientProps {
+  systemData: SystemAnalytics | null;
+  aiUsageData: AIUsageAnalytics | null;
+  contentData: ContentStatistics | null;
+  error: string | null;
+}
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token') || '';
-      const [system, ai, content] = await Promise.all([
-        getSystemAnalytics(token),
-        getAIUsageAnalytics(token, dateRange),
-        getContentStatistics(token),
-      ]);
-      setSystemData(system);
-      setAIData(ai);
-      setContentData(content);
-    } catch (error: any) {
-      showToast('error', error.message || 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+export default function AnalyticsClient({ systemData, aiUsageData, contentData, error }: AnalyticsClientProps) {
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Spinner size="lg" />
-      </div>
+      <Card className="text-center py-12">
+        <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900">Error loading analytics</h3>
+        <p className="text-red-500 mt-1">{error}</p>
+      </Card>
+    );
+  }
+
+  if (!systemData || !aiUsageData || !contentData) {
+    return (
+      <Card className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900">No data available</h3>
+        <p className="text-gray-500 mt-1">Analytics data will appear here once available</p>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-        <p className="text-gray-500 mt-1">Comprehensive system analytics and insights</p>
+        <p className="text-gray-500 mt-1">System-wide analytics and insights</p>
       </div>
 
       {/* System Overview */}
-      {systemData && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Users"
-              value={systemData.overview.total_users.toLocaleString()}
-              change={`${systemData.overview.new_users_week} new this week`}
-              changeType="positive"
-              icon={<UsersIcon />}
-              gradient="purple"
-            />
-            <StatCard
-              title="Active Users"
-              value={systemData.overview.active_users.toLocaleString()}
-              change={`${((systemData.overview.active_users / systemData.overview.total_users) * 100).toFixed(1)}% active`}
-              changeType="positive"
-              icon={<ActiveIcon />}
-              gradient="green"
-            />
-            <StatCard
-              title="Total Notes"
-              value={systemData.overview.total_notes.toLocaleString()}
-              change={`${systemData.overview.total_tasks.toLocaleString()} tasks`}
-              changeType="neutral"
-              icon={<NotesIcon />}
-              gradient="blue"
-            />
-            <StatCard
-              title="Admin Users"
-              value={systemData.overview.admin_users.toLocaleString()}
-              change={`${systemData.overview.oauth_users} OAuth users`}
-              changeType="neutral"
-              icon={<AdminIcon />}
-              gradient="orange"
-            />
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Users"
+          value={systemData.overview.total_users.toLocaleString()}
+          change={`${systemData.overview.new_users_month} this month`}
+          changeType="positive"
+          icon={<UsersIcon />}
+          gradient="purple"
+        />
+        <StatCard
+          title="Active Users"
+          value={systemData.overview.active_users.toLocaleString()}
+          change={`${Math.round((systemData.overview.active_users / systemData.overview.total_users) * 100)}% active`}
+          changeType="positive"
+          icon={<ActiveIcon />}
+          gradient="green"
+        />
+        <StatCard
+          title="Total Notes"
+          value={systemData.overview.total_notes.toLocaleString()}
+          change="Content created"
+          changeType="neutral"
+          icon={<NotesIcon />}
+          gradient="blue"
+        />
+        <StatCard
+          title="Total Tasks"
+          value={systemData.overview.total_tasks.toLocaleString()}
+          change={`${systemData.overview.completed_tasks} completed`}
+          changeType="positive"
+          icon={<TasksIcon />}
+          gradient="orange"
+        />
+      </div>
 
-          {/* Daily Registrations Chart */}
-          <Card hover>
-            <CardTitle>Daily Registrations (Last 30 Days)</CardTitle>
-            <div className="mt-6 h-64 flex items-end justify-between gap-2">
-              {systemData.daily_registrations.slice(-30).map((day, idx) => {
-                const maxValue = Math.max(...systemData.daily_registrations.map(d => d.registrations));
-                const heightPercent = maxValue > 0 ? (day.registrations / maxValue) * 100 : 0;
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600">{day.registrations}</span>
-                    <div className="w-full h-48 bg-gray-100 rounded-lg relative overflow-hidden flex items-end">
-                      <div
-                        className="w-full bg-gradient-to-t from-[#6D28D9] to-[#8B5CF6] rounded-lg transition-all duration-500"
-                        style={{ height: `${heightPercent}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-500">{new Date(day.date).getDate()}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Most Active Users */}
-          <Card hover>
-            <CardTitle>Most Active Users (Top 10)</CardTitle>
-            <div className="mt-4 space-y-3">
-              {systemData.most_active_users.map((user, idx) => (
-                <div key={user.user_id} className="flex items-center justify-between p-3 rounded-xl hover:bg-purple-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-purple-600">#{idx + 1}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 text-sm">
-                    <div className="text-center">
-                      <p className="font-bold text-gray-900">{user.notes_count}</p>
-                      <p className="text-xs text-gray-500">Notes</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-bold text-gray-900">{user.tasks_count}</p>
-                      <p className="text-xs text-gray-500">Tasks</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-bold text-gray-900">{user.recordings_count}</p>
-                      <p className="text-xs text-gray-500">Recordings</p>
-                    </div>
-                  </div>
+      {/* Daily Registrations Chart */}
+      <Card hover>
+        <CardTitle>Daily Registrations (Last 30 Days)</CardTitle>
+        <div className="mt-6 h-64 flex items-end justify-between gap-2">
+          {systemData.daily_registrations.slice(-30).map((day, idx) => {
+            const maxValue = Math.max(...systemData.daily_registrations.map(d => d.registrations));
+            const heightPercent = maxValue > 0 ? (day.registrations / maxValue) * 100 : 0;
+            return (
+              <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                <span className="text-xs font-medium text-gray-600">{day.registrations}</span>
+                <div className="w-full h-48 bg-gray-100 rounded-lg relative overflow-hidden flex items-end">
+                  <div
+                    className="w-full bg-gradient-to-t from-purple-500 to-purple-400 rounded-lg transition-all duration-500"
+                    style={{ height: `${heightPercent}%` }}
+                  />
                 </div>
-              ))}
+                <span className="text-xs text-gray-500">{new Date(day.date).getDate()}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Most Active Users */}
+      <Card hover>
+        <CardTitle>Most Active Users</CardTitle>
+        <div className="mt-6 space-y-4">
+          {systemData.most_active_users.map((user, idx) => (
+            <div key={user.user_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold">
+                  #{idx + 1}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">{user.name}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
+              </div>
+              <div className="flex gap-4 text-sm">
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{user.notes_count}</p>
+                  <p className="text-gray-500">Notes</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{user.tasks_count}</p>
+                  <p className="text-gray-500">Tasks</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{user.recordings_count}</p>
+                  <p className="text-gray-500">Recordings</p>
+                </div>
+              </div>
             </div>
-          </Card>
-        </>
-      )}
+          ))}
+        </div>
+      </Card>
 
       {/* AI Usage Analytics */}
-      {aiData && (
+      {aiUsageData && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              title="Total Summarizations"
-              value={aiData.totals.total_summarizations.toLocaleString()}
-              change="AI-powered"
-              changeType="neutral"
-              icon={<AIIcon />}
-              gradient="purple"
-            />
-            <StatCard
               title="Total Transcriptions"
-              value={aiData.totals.total_transcriptions.toLocaleString()}
+              value={aiUsageData.totals.total_transcriptions.toLocaleString()}
               change="Voice-to-text"
               changeType="neutral"
               icon={<TranscriptionIcon />}
               gradient="blue"
             />
             <StatCard
+              title="Total Summarizations"
+              value={aiUsageData.totals.total_summarizations.toLocaleString()}
+              change="AI-powered"
+              changeType="neutral"
+              icon={<AIIcon />}
+              gradient="purple"
+            />
+            <StatCard
               title="Active AI Users"
-              value={aiData.totals.active_ai_users.toLocaleString()}
+              value={aiUsageData.totals.active_ai_users.toLocaleString()}
               change="Using AI features"
               changeType="positive"
               icon={<UsersIcon />}
@@ -184,8 +171,8 @@ export default function AnalyticsClient() {
             />
             <StatCard
               title="Estimated Cost"
-              value={`$${aiData.token_estimate.estimated_cost_usd}`}
-              change={`${aiData.token_estimate.total_tokens.toLocaleString()} tokens`}
+              value={`$${aiUsageData.token_estimate.estimated_cost_usd}`}
+              change={`${aiUsageData.token_estimate.total_tokens.toLocaleString()} tokens`}
               changeType="neutral"
               icon={<CostIcon />}
               gradient="orange"
@@ -195,8 +182,8 @@ export default function AnalyticsClient() {
           <Card hover>
             <CardTitle>AI Usage Trends</CardTitle>
             <div className="mt-6 h-64 flex items-end justify-between gap-2">
-              {aiData.daily_stats.slice(-30).map((day, idx) => {
-                const maxValue = Math.max(...aiData.daily_stats.map(d => d.total_ai_requests));
+              {aiUsageData.daily_stats.slice(-30).map((day, idx) => {
+                const maxValue = Math.max(...aiUsageData.daily_stats.map(d => d.total_ai_requests));
                 const heightPercent = maxValue > 0 ? (day.total_ai_requests / maxValue) * 100 : 0;
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center gap-2">
@@ -217,91 +204,106 @@ export default function AnalyticsClient() {
       )}
 
       {/* Content Statistics */}
-      {contentData && (
+      {contentData && contentData.statistics && (
         <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Notes Today"
+              value={contentData.statistics.notes_today?.toLocaleString() || '0'}
+              change={`${contentData.statistics.notes_week || 0} this week`}
+              changeType="positive"
+              icon={<NotesIcon />}
+              gradient="blue"
+            />
+            <StatCard
+              title="Tasks Today"
+              value={contentData.statistics.tasks_today?.toLocaleString() || '0'}
+              change={`${contentData.statistics.tasks_week || 0} this week`}
+              changeType="positive"
+              icon={<TasksIcon />}
+              gradient="purple"
+            />
+            <StatCard
+              title="Recordings Today"
+              value={contentData.statistics.recordings_today?.toLocaleString() || '0'}
+              change={`${contentData.statistics.recordings_week || 0} this week`}
+              changeType="positive"
+              icon={<RecordingIcon />}
+              gradient="green"
+            />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Popular Tags */}
             <Card hover>
-              <CardTitle>Content Activity</CardTitle>
-              <div className="mt-4 space-y-4">
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Notes Today</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.notes_today}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Tasks Today</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.tasks_today}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Recordings Today</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.recordings_today}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Storage Used</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.total_storage_used_mb} MB</span>
-                </div>
+              <CardTitle>Popular Tags</CardTitle>
+              <div className="mt-6 space-y-3">
+                {contentData.popular_tags && contentData.popular_tags.length > 0 ? (
+                  contentData.popular_tags.map((tag, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color || '#6366f1' }} />
+                        <span className="font-medium text-gray-900">{tag.name}</span>
+                      </div>
+                      <Badge variant="default">{tag.usage_count || 0} uses</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No tags data available</p>
+                )}
               </div>
             </Card>
 
+            {/* Popular Categories */}
             <Card hover>
-              <CardTitle>Weekly Activity</CardTitle>
-              <div className="mt-4 space-y-4">
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Notes This Week</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.notes_week}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Tasks This Week</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.tasks_week}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Recordings This Week</span>
-                  <span className="text-lg font-bold text-gray-900">{contentData.statistics.recordings_week}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
-                  <span className="text-sm text-gray-600">Avg Note Length</span>
-                  <span className="text-lg font-bold text-gray-900">{parseFloat(contentData.statistics.avg_note_length).toFixed(0)} chars</span>
-                </div>
+              <CardTitle>Popular Categories</CardTitle>
+              <div className="mt-6 space-y-3">
+                {contentData.popular_categories && contentData.popular_categories.length > 0 ? (
+                  contentData.popular_categories.map((category) => (
+                    <div key={category.category_id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color || '#6366f1' }} />
+                        <span className="font-medium text-gray-900">{category.name}</span>
+                      </div>
+                      <Badge variant="default">{category.task_count || 0} tasks</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No categories data available</p>
+                )}
               </div>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card hover>
-              <CardTitle>Popular Tags (Top 10)</CardTitle>
-              <div className="mt-4 space-y-2">
-                {contentData.popular_tags.map((tag, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                      <span className="text-sm text-gray-900">{tag.name}</span>
-                    </div>
-                    <Badge variant="default">{tag.usage_count}</Badge>
-                  </div>
-                ))}
+          {/* Storage Stats */}
+          <Card hover>
+            <CardTitle>Storage & Performance</CardTitle>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="text-center p-4 bg-gray-50 rounded-xl">
+                <p className="text-3xl font-bold text-gray-900">{contentData.statistics.total_storage_used_mb || '0'} MB</p>
+                <p className="text-sm text-gray-500 mt-1">Total Storage Used</p>
               </div>
-            </Card>
-
-            <Card hover>
-              <CardTitle>Popular Categories (Top 10)</CardTitle>
-              <div className="mt-4 space-y-2">
-                {contentData.popular_categories.map((category) => (
-                  <div key={category.category_id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
-                      <span className="text-sm text-gray-900">{category.name}</span>
-                    </div>
-                    <Badge variant="info">{category.task_count} tasks</Badge>
-                  </div>
-                ))}
+              <div className="text-center p-4 bg-gray-50 rounded-xl">
+                <p className="text-3xl font-bold text-gray-900">{contentData.statistics.avg_note_length || '0'}</p>
+                <p className="text-sm text-gray-500 mt-1">Avg Note Length (chars)</p>
               </div>
-            </Card>
-          </div>
+              <div className="text-center p-4 bg-gray-50 rounded-xl">
+                <p className="text-3xl font-bold text-gray-900">
+                  {contentData.statistics.avg_recording_size 
+                    ? (parseInt(contentData.statistics.avg_recording_size) / 1024 / 1024).toFixed(2) 
+                    : '0.00'} MB
+                </p>
+                <p className="text-sm text-gray-500 mt-1">Avg Recording Size</p>
+              </div>
+            </div>
+          </Card>
         </>
       )}
     </div>
   );
 }
 
+// Icon Components
 function UsersIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,18 +328,10 @@ function NotesIcon() {
   );
 }
 
-function AdminIcon() {
+function TasksIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
-}
-
-function AIIcon() {
-  return (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
   );
 }
@@ -350,10 +344,26 @@ function TranscriptionIcon() {
   );
 }
 
+function AIIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+}
+
 function CostIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function RecordingIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
   );
 }

@@ -1,5 +1,5 @@
-// Use the Next.js proxy route to avoid CORS issues
-export const API_BASE_URL = '/api/proxy';
+// Direct backend API URL (no proxy)
+export const API_BASE_URL = 'https://voclio-backend.build8.dev/api';
 
 export const ROUTES = {
   LOGIN: '/login',
