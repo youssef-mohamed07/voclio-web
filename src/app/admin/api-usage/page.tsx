@@ -1,35 +1,37 @@
-import { mockApiUsage } from '@/lib/mock-data';
+import { requireAuth } from '@/lib/auth';
+import { getApiUsage } from '@/services/api-usage';
 import ApiUsageClient from './ApiUsageClient';
 
 interface PageProps {
   searchParams: Promise<{
     start_date?: string;
     end_date?: string;
-    api_type?: string;
   }>;
 }
 
 export default async function ApiUsagePage({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  // Filter breakdown if api_type is specified
-  let usageData = { ...mockApiUsage };
-  
-  if (params.api_type) {
-    usageData = {
-      ...usageData,
-      breakdown: usageData.breakdown.filter(b => b.api_type === params.api_type)
-    };
+  let usageData = null;
+  let error: string | null = null;
+
+  try {
+    const token = await requireAuth();
+    usageData = await getApiUsage(token, {
+      start_date: params.start_date,
+      end_date: params.end_date,
+    });
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'Failed to load API usage';
   }
 
   return (
     <ApiUsageClient
       initialData={usageData}
-      initialError={null}
+      initialError={error}
       initialFilters={{
         start_date: params.start_date || '',
         end_date: params.end_date || '',
-        api_type: params.api_type || '',
       }}
     />
   );

@@ -37,10 +37,15 @@ export default function ConfigClient({ initialData, initialError }: ConfigClient
         .filter((c, i) => JSON.stringify(c.value) !== JSON.stringify(originalConfigs[i]?.value))
         .map((c) => ({ key: c.key, value: c.value }));
 
+      const config: Record<string, string> = {};
+      changedConfigs.forEach((c) => {
+        config[c.key] = String(c.value);
+      });
+
       const res = await fetch('/api/proxy/admin/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ configs: changedConfigs }),
+        body: JSON.stringify({ config }),
       });
 
       if (!res.ok) throw new Error('Failed to save configuration');

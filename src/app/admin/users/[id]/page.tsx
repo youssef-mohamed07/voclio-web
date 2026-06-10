@@ -1,4 +1,5 @@
-import { mockUsers } from '@/lib/mock-data';
+import { requireAuth } from '@/lib/auth';
+import { getUser } from '@/services/users';
 import { notFound } from 'next/navigation';
 import UserDetailsClient from './UserDetailsClient';
 
@@ -9,11 +10,11 @@ interface PageProps {
 export default async function UserDetailsPage({ params }: PageProps) {
   const { id } = await params;
 
-  const user = mockUsers.find(u => u.id === id);
-  
-  if (!user) {
+  try {
+    const token = await requireAuth();
+    const user = await getUser(token, id);
+    return <UserDetailsClient user={user} />;
+  } catch {
     notFound();
   }
-
-  return <UserDetailsClient user={user} />;
 }

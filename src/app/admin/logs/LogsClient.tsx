@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Log, PaginatedResponse } from '@/lib/types';
 import { ROUTES, SEVERITY_LEVELS, ACTIVITY_TYPES } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format';
 import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -179,7 +180,7 @@ export default function LogsClient({ initialData, initialError, initialFilters }
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          {new Date(log.created_at).toLocaleString()}
+                          {formatDateTime(log.created_at)}
                         </span>
                       </div>
                     </div>

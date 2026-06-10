@@ -1,12 +1,13 @@
-import { apiFetch, buildQueryString } from './api';
-import { User, PaginatedResponse } from '@/lib/types';
+import { apiFetchData, buildQueryString } from './api';
+import { unwrapData, unwrapPaginated } from '@/lib/api-response';
+import { mapUser, mapTask, mapNote, mapUserDetail } from '@/lib/mappers';
+import { User, Task, Note, PaginatedResponse } from '@/lib/types';
 
 interface UsersParams {
   page?: number;
   limit?: number;
   search?: string;
-  subscription_tier?: string;
-  is_active?: boolean;
+  status?: string;
 }
 
 export async function getUsers(token: string, params: UsersParams = {}): Promise<PaginatedResponse<User>> {
@@ -14,34 +15,136 @@ export async function getUsers(token: string, params: UsersParams = {}): Promise
     page: params.page || 1,
     limit: params.limit || 10,
     search: params.search,
-    subscription_tier: params.subscription_tier,
-    is_active: params.is_active,
+    status: params.status,
   });
-  return apiFetch<PaginatedResponse<User>>(`/admin/users${query}`, { token });
+
+  const response = await apiFetchData<Record<string, unknown>[]>(`/admin/users${query}`, { token });
+  const paginated = unwrapPaginated(response);
+  return {
+    ...paginated,
+    data: paginated.data.map((u) => mapUser(u as Record<string, unknown>)),
+  };
 }
 
 export async function getUser(token: string, id: string): Promise<User> {
-  return apiFetch<User>(`/admin/users/${id}`, { token });
+  const [detailRes, tasksRes, notesRes] = await Promise.all([
+    apiFetchData<Record<string, unknown>>(`/admin/users/${id}`, { token }),
+    apiFetchData<{ tasks: Record<string, unknown>[] }>(`/admin/users/${id}/tasks`, { token }),
+    apiFetchData<{ notes: Record<string, unknown>[] }>(`/admin/users/${id}/notes`, { token }),
+  ]);
+
+  const detail = unwrapData(detailRes);
+  const tasks = (unwrapData(tasksRes).tasks ?? []).map((t) => mapTask(t));
+  const notes = (unwrapData(notesRes).notes ?? []).map((n) => mapNote(n));
+
+  return mapUserDetail(detail, tasks, notes);
 }
 
-export async function updateUser(token: string, id: string, data: Partial<User>): Promise<User> {
-  return apiFetch<User>(`/admin/users/${id}`, {
+export async function createUser(
+  token: string,
+  data: { email: string; password: string; name?: string; is_admin?: boolean }
+): Promise<User> {
+  const response = await apiFetchData<Record<string, unknown>>('/admin/users', {
+    token,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return mapUser(unwrapData(response));
+}
+
+export async function updateUser(
+  token: string,
+  id: string,
+  data: Partial<{ name: string; email: string; is_active: boolean; is_admin: boolean; phone_number: string }>
+): Promise<User> {
+  const response = await apiFetchData<Record<string, unknown>>(`/admin/users/${id}`, {
     token,
     method: 'PUT',
     body: JSON.stringify(data),
   });
+  return mapUser(unwrapData(response));
 }
 
 export async function deleteUser(token: string, id: string): Promise<void> {
-  return apiFetch<void>(`/admin/users/${id}`, {
-    token,
-    method: 'DELETE',
-  });
+  await apiFetchData<null>(`/admin/users/${id}`, { token, method: 'DELETE' });
 }
 
-export async function resetUserPassword(token: string, id: string): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/admin/users/${id}/reset-password`, {
+export async function resetUserPassword(
+  token: string,
+  id: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  const response = await apiFetchData<null>(`/admin/users/${id}/reset-password`, {
     token,
     method: 'POST',
+    body: JSON.stringify({ new_password: newPassword }),
   });
+  return { message: response.message ?? 'Password reset successfully' };
+}
+
+export async function createUserTask(
+  token: string,
+  userId: string,
+  data: { title: string; description?: string; priority?: string }
+): Promise<Task> {
+  const response = await apiFetchData<{ task: Record<string, unknown> }>(
+    `/admin/users/${userId}/tasks`,
+    { token, method: 'POST', body: JSON.stringify(data) }
+  );
+  return mapTask(unwrapData(response).task);
+}
+
+export async function updateUserTask(
+  token: string,
+  userId: string,
+  taskId: string,
+  data: Partial<{ title: string; description: string; status: string; priority: string }>
+): Promise<Task> {
+  const response = await apiFetchData<{ task: Record<string, unknown> }>(
+    `/admin/users/${userId}/tasks/${taskId}`,
+    { token, method: 'PUT', body: JSON.stringify(data) }
+  );
+  return mapTask(unwrapData(response).task);
+}
+
+export async function deleteUserTask(token: string, userId: string, taskId: string): Promise<void> {
+  await apiFetchData<null>(`/admin/users/${userId}/tasks/${taskId}`, { token, method: 'DELETE' });
+}
+
+export async function createUserNote(
+  token: string,
+  userId: string,
+  data: { title: string; content: string }
+): Promise<Note> {
+  const response = await apiFetchData<{ note: Record<string, unknown> }>(
+    `/admin/users/${userId}/notes`,
+    { token, method: 'POST', body: JSON.stringify(data) }
+  );
+  return mapNote(unwrapData(response).note);
+}
+
+export async function updateUserNote(
+  token: string,
+  userId: string,
+  noteId: string,
+  data: Partial<{ title: string; content: string; is_pinned: boolean }>
+): Promise<Note> {
+  const response = await apiFetchData<{ note: Record<string, unknown> }>(
+    `/admin/users/${userId}/notes/${noteId}`,
+    { token, method: 'PUT', body: JSON.stringify(data) }
+  );
+  return mapNote(unwrapData(response).note);
+}
+
+export async function deleteUserNote(token: string, userId: string, noteId: string): Promise<void> {
+  await apiFetchData<null>(`/admin/users/${userId}/notes/${noteId}`, { token, method: 'DELETE' });
+}
+
+export async function bulkDeleteUsers(token: string, userIds: string[]): Promise<{ deleted_count: number }> {
+  const response = await apiFetchData<{ deleted_count: number }>('/admin/users/bulk-delete', {
+    token,
+    method: 'POST',
+    body: JSON.stringify({ userIds: userIds.map((id) => parseInt(id, 10)) }),
+  });
+  return unwrapData(response);
 }

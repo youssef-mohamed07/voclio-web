@@ -4,10 +4,10 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ApiUsage } from '@/lib/types';
 import { ROUTES } from '@/lib/constants';
+import { formatDate, formatNumber } from '@/lib/format';
 import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
 import DataTable from '@/components/tables/DataTable';
 
 interface ApiUsageClientProps {
@@ -16,7 +16,6 @@ interface ApiUsageClientProps {
   initialFilters: {
     start_date: string;
     end_date: string;
-    api_type: string;
   };
 }
 
@@ -27,7 +26,6 @@ export default function ApiUsageClient({ initialData, initialError, initialFilte
 
   const [startDate, setStartDate] = useState(initialFilters.start_date);
   const [endDate, setEndDate] = useState(initialFilters.end_date);
-  const [apiType, setApiType] = useState(initialFilters.api_type);
 
   const handleFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -35,56 +33,46 @@ export default function ApiUsageClient({ initialData, initialError, initialFilte
     else params.delete('start_date');
     if (endDate) params.set('end_date', endDate);
     else params.delete('end_date');
-    if (apiType) params.set('api_type', apiType);
-    else params.delete('api_type');
     startTransition(() => {
       router.push(`${ROUTES.API_USAGE}?${params.toString()}`);
     });
   };
 
+  const totals = initialData?.totals;
+
   const stats = [
     {
-      label: 'Total Requests',
-      value: initialData?.total_requests?.toLocaleString() ?? '—',
+      label: 'AI Operations',
+      value: totals?.total_ai_operations != null ? formatNumber(totals.total_ai_operations) : initialData?.total_requests != null ? formatNumber(initialData.total_requests) : '—',
       icon: RequestsIcon,
       color: 'bg-purple-100 text-[#6D28D9]',
     },
     {
-      label: 'Total Errors',
-      value: initialData?.total_errors?.toLocaleString() ?? '—',
+      label: 'Transcriptions',
+      value: totals?.total_transcriptions != null ? formatNumber(totals.total_transcriptions) : '—',
       icon: ErrorsIcon,
-      color: 'bg-red-100 text-red-600',
+      color: 'bg-blue-100 text-blue-600',
     },
     {
-      label: 'Success Rate',
-      value: initialData?.success_rate ? `${initialData.success_rate.toFixed(2)}%` : '—',
+      label: 'Active AI Users',
+      value: totals?.active_ai_users != null ? formatNumber(totals.active_ai_users) : '—',
       icon: SuccessIcon,
       color: 'bg-green-100 text-green-600',
     },
   ];
 
   const columns = [
-    { key: 'api_type', header: 'API Type' },
-    { key: 'date', header: 'Date', render: (item: { date: string }) => new Date(item.date).toLocaleDateString() },
-    { key: 'requests', header: 'Requests', render: (item: { requests: number }) => item.requests.toLocaleString() },
-    { key: 'errors', header: 'Errors', render: (item: { errors: number }) => item.errors.toLocaleString() },
-    {
-      key: 'success_rate',
-      header: 'Success Rate',
-      render: (item: { requests: number; errors: number }) => {
-        const rate = item.requests > 0 ? ((item.requests - item.errors) / item.requests * 100).toFixed(1) : '0';
-        return `${rate}%`;
-      },
-    },
+    { key: 'date', header: 'Date', render: (item: { date: string }) => formatDate(item.date) },
+    { key: 'transcriptions', header: 'Transcriptions', render: (item: { transcriptions?: number }) => formatNumber(item.transcriptions ?? 0) },
+    { key: 'task_extractions', header: 'Task Extractions', render: (item: { task_extractions?: number }) => formatNumber(item.task_extractions ?? 0) },
+    { key: 'requests', header: 'Total AI Requests', render: (item: { requests: number }) => formatNumber(item.requests) },
   ];
-
-  const apiTypes = [...new Set(initialData?.breakdown?.map((b) => b.api_type) || [])];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">API Usage</h1>
-        <p className="text-gray-500 mt-1">Monitor API requests and performance metrics</p>
+        <h1 className="text-2xl font-bold text-gray-900">AI Usage</h1>
+        <p className="text-gray-500 mt-1">Monitor AI operations, transcriptions, and token usage</p>
       </div>
 
       {/* Stats */}
@@ -111,11 +99,6 @@ export default function ApiUsageClient({ initialData, initialError, initialFilte
           <div className="mt-4 flex flex-col lg:flex-row gap-4">
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} placeholder="Start Date" />
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} placeholder="End Date" />
-            <Select
-              value={apiType}
-              onChange={(e) => setApiType(e.target.value)}
-              options={[{ value: '', label: 'All API Types' }, ...apiTypes.map((t) => ({ value: t, label: t }))]}
-            />
             <Button onClick={handleFilter} loading={isPending}>Apply Filters</Button>
           </div>
         </div>

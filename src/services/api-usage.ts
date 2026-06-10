@@ -1,17 +1,20 @@
-import { apiFetch, buildQueryString } from './api';
+import { apiFetchData, buildQueryString } from './api';
+import { unwrapData } from '@/lib/api-response';
+import { mapApiUsage } from '@/lib/mappers';
 import { ApiUsage } from '@/lib/types';
 
 interface ApiUsageParams {
   start_date?: string;
   end_date?: string;
-  api_type?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export async function getApiUsage(token: string, params: ApiUsageParams = {}): Promise<ApiUsage> {
   const query = buildQueryString({
-    start_date: params.start_date,
-    end_date: params.end_date,
-    api_type: params.api_type,
+    startDate: params.startDate || params.start_date,
+    endDate: params.endDate || params.end_date,
   });
-  return apiFetch<ApiUsage>(`/admin/api-usage${query}`, { token });
+  const response = await apiFetchData<Record<string, unknown>>(`/admin/api-usage${query}`, { token });
+  return mapApiUsage(unwrapData(response));
 }

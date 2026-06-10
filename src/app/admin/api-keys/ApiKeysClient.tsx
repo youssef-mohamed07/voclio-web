@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApiKey, PaginatedResponse } from '@/lib/types';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, API_KEY_TYPES } from '@/lib/constants';
+import { formatDate } from '@/lib/format';
 import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -30,6 +31,8 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
   const [deleting, setDeleting] = useState(false);
 
   const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyType, setNewKeyType] = useState('gemini');
+  const [newKeyToken, setNewKeyToken] = useState('');
   const [editKeyName, setEditKeyName] = useState('');
   const [editKeyActive, setEditKeyActive] = useState(true);
 
@@ -40,18 +43,24 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
   };
 
   const handleCreate = async () => {
-    if (!newKeyName.trim()) return;
+    if (!newKeyName.trim() || !newKeyToken.trim()) return;
     setSaving(true);
     try {
       const res = await fetch('/api/proxy/admin/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newKeyName, permissions: ['read'] }),
+        body: JSON.stringify({
+          name: newKeyName,
+          api_type: newKeyType,
+          access_token: newKeyToken,
+        }),
       });
       if (!res.ok) throw new Error('Failed to create API key');
       showToast('success', 'API key created successfully');
       setCreateModal(false);
       setNewKeyName('');
+      setNewKeyToken('');
+      setNewKeyType('gemini');
       router.refresh();
     } catch {
       showToast('error', 'Failed to create API key');
@@ -144,8 +153,11 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
                       </svg>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-gray-900">{key.name}</h3>
+                        {key.api_type && (
+                          <Badge variant="info" size="sm">{key.api_type}</Badge>
+                        )}
                         <Badge variant={key.is_active ? 'success' : 'error'} dot>
                           {key.is_active ? 'Active' : 'Inactive'}
                         </Badge>
@@ -170,11 +182,11 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
                     <div className="hidden md:flex items-center gap-6 text-sm">
                       <div>
                         <p className="text-gray-400">Created</p>
-                        <p className="text-gray-700 font-medium">{new Date(key.created_at).toLocaleDateString()}</p>
+                        <p className="text-gray-700 font-medium">{formatDate(key.created_at)}</p>
                       </div>
                       <div>
                         <p className="text-gray-400">Last Used</p>
-                        <p className="text-gray-700 font-medium">{key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never'}</p>
+                        <p className="text-gray-700 font-medium">{key.last_used ? formatDate(key.last_used) : 'Never'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -229,11 +241,32 @@ export default function ApiKeysClient({ initialData, initialError, currentPage }
         footer={
           <>
             <Button variant="secondary" onClick={() => setCreateModal(false)}>Cancel</Button>
-            <Button variant="gradient" onClick={handleCreate} loading={saving} disabled={!newKeyName.trim()}>Create</Button>
+            <Button variant="gradient" onClick={handleCreate} loading={saving} disabled={!newKeyName.trim() || !newKeyToken.trim()}>Create</Button>
           </>
         }
       >
-        <Input label="Key Name" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder="e.g. Production API" />
+        <div className="space-y-4">
+          <Input label="Key Name" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder="e.g. Production Gemini" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">API Type</label>
+            <select
+              value={newKeyType}
+              onChange={(e) => setNewKeyType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6D28D9]"
+            >
+              {API_KEY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Access Token"
+            type="password"
+            value={newKeyToken}
+            onChange={(e) => setNewKeyToken(e.target.value)}
+            placeholder="Paste API key / token"
+          />
+        </div>
       </Modal>
 
       {/* Edit Modal */}

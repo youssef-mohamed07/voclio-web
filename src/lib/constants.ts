@@ -1,4 +1,12 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+export const API_KEY_TYPES = [
+  { value: 'gemini', label: 'Gemini' },
+  { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'assemblyai', label: 'AssemblyAI' },
+  { value: 'google', label: 'Google' },
+  { value: 'other', label: 'Other' },
+] as const;
 
 export const ROUTES = {
   LOGIN: '/login',
@@ -8,8 +16,24 @@ export const ROUTES = {
   API_KEYS: '/admin/api-keys',
   LOGS: '/admin/logs',
   CONFIG: '/admin/config',
+  ANALYTICS: '/admin/analytics',
+  SYSTEM: '/admin/system',
 } as const;
 
-export const SUBSCRIPTION_TIERS = ['free', 'basic', 'pro', 'enterprise'] as const;
+export const USER_STATUS_FILTERS = [
+  { value: '', label: 'All Users' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'admin', label: 'Admins' },
+] as const;
+
 export const SEVERITY_LEVELS = ['info', 'warning', 'error', 'critical'] as const;
-export const ACTIVITY_TYPES = ['login', 'logout', 'api_call', 'config_change', 'user_update'] as const;
+export const ACTIVITY_TYPES = [
+  'login',
+  'logout',
+  'api_call',
+  'config_change',
+  'user_update',
+  'note_created',
+  'task_created',
+] as const;

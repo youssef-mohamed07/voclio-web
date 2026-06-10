@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Task, Note } from '@/lib/types';
-import { SUBSCRIPTION_TIERS, ROUTES } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
+import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
@@ -23,19 +24,23 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
   const { showToast } = useToast();
 
   const [user, setUser] = useState(initialUser);
-  const [tier, setTier] = useState(user.subscription_tier);
+  const [isAdmin, setIsAdmin] = useState(user.is_admin ?? false);
   const [isActive, setIsActive] = useState(user.is_active);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetModal, setResetModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes'>('overview');
   const [taskModal, setTaskModal] = useState(false);
   const [noteModal, setNoteModal] = useState(false);
+  const [editNoteModal, setEditNoteModal] = useState<{ open: boolean; note: Note | null }>({ open: false, note: null });
+  const [editNote, setEditNote] = useState({ title: '', content: '' });
   const [newTask, setNewTask] = useState<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }>({ title: '', description: '', priority: 'medium' });
   const [newNote, setNewNote] = useState({ title: '', content: '' });
 
-  const hasChanges = tier !== user.subscription_tier || isActive !== user.is_active;
+  const hasChanges = isAdmin !== (user.is_admin ?? false) || isActive !== user.is_active;
 
   const handleSave = async () => {
     setSaving(true);
@@ -43,25 +48,40 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
       const res = await fetch(`/api/proxy/admin/users/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription_tier: tier, is_active: isActive }),
+        body: JSON.stringify({ is_active: isActive, is_admin: isAdmin }),
       });
-      if (!res.ok) throw new Error('Failed to update user');
-      const updated = await res.json();
-      setUser(updated);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'Failed to update user');
+      }
+      const json = await res.json();
+      const updated = json.data ?? json;
+      setUser({ ...user, is_active: isActive, is_admin: isAdmin, ...updated });
       showToast('success', 'User updated successfully');
-    } catch {
-      showToast('error', 'Failed to update user');
+      router.refresh();
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to update user');
     } finally {
       setSaving(false);
     }
   };
 
   const handleResetPassword = async () => {
+    if (newPassword.length < 8) {
+      showToast('error', 'Password must be at least 8 characters');
+      return;
+    }
     setResetting(true);
     try {
-      const res = await fetch(`/api/proxy/admin/users/${user.id}/reset-password`, { method: 'POST' });
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPassword }),
+      });
       if (!res.ok) throw new Error('Failed to reset password');
-      showToast('success', 'Password reset email sent');
+      showToast('success', 'Password reset successfully');
+      setResetModal(false);
+      setNewPassword('');
     } catch {
       showToast('error', 'Failed to reset password');
     } finally {
@@ -83,55 +103,115 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
     }
   };
 
-  const handleAddTask = () => {
-    const task: Task = {
-      id: Date.now().toString(),
-      title: newTask.title,
-      description: newTask.description,
-      status: 'pending',
-      priority: newTask.priority,
-      created_at: new Date().toISOString(),
-    };
-    setUser({ ...user, tasks: [...(user.tasks || []), task] });
-    setTaskModal(false);
-    setNewTask({ title: '', description: '', priority: 'medium' });
-    showToast('success', 'Task added successfully');
+  const handleAddTask = async () => {
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTask.title, description: newTask.description, priority: newTask.priority }),
+      });
+      if (!res.ok) throw new Error('Failed to add task');
+      const json = await res.json();
+      const task = mapTaskFromApi(json.data?.task ?? json.task);
+      setUser({ ...user, tasks: [...(user.tasks || []), task] });
+      setTaskModal(false);
+      setNewTask({ title: '', description: '', priority: 'medium' });
+      showToast('success', 'Task added successfully');
+    } catch {
+      showToast('error', 'Failed to add task');
+    }
   };
 
-  const handleAddNote = () => {
-    const note: Note = {
-      id: Date.now().toString(),
-      title: newNote.title,
-      content: newNote.content,
-      is_pinned: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setUser({ ...user, notes: [...(user.notes || []), note] });
-    setNoteModal(false);
-    setNewNote({ title: '', content: '' });
-    showToast('success', 'Note added successfully');
+  const handleAddNote = async () => {
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newNote.title, content: newNote.content }),
+      });
+      if (!res.ok) throw new Error('Failed to add note');
+      const json = await res.json();
+      const note = mapNoteFromApi(json.data?.note ?? json.note);
+      setUser({ ...user, notes: [...(user.notes || []), note] });
+      setNoteModal(false);
+      setNewNote({ title: '', content: '' });
+      showToast('success', 'Note added successfully');
+    } catch {
+      showToast('error', 'Failed to add note');
+    }
   };
 
-  const toggleTaskStatus = (taskId: string) => {
-    setUser({
-      ...user,
-      tasks: user.tasks?.map(t => 
-        t.id === taskId 
-          ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed', completed_at: t.status === 'completed' ? undefined : new Date().toISOString() }
-          : t
-      ),
-    });
+  const toggleTaskStatus = async (taskId: string) => {
+    const task = user.tasks?.find((t) => t.id === taskId);
+    if (!task) return;
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update task');
+      setUser({
+        ...user,
+        tasks: user.tasks?.map((t) =>
+          t.id === taskId
+            ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : undefined }
+            : t
+        ),
+      });
+    } catch {
+      showToast('error', 'Failed to update task');
+    }
   };
 
-  const deleteTask = (taskId: string) => {
-    setUser({ ...user, tasks: user.tasks?.filter(t => t.id !== taskId) });
-    showToast('success', 'Task deleted');
+  const deleteTask = async (taskId: string) => {
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/tasks/${taskId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete task');
+      setUser({ ...user, tasks: user.tasks?.filter((t) => t.id !== taskId) });
+      showToast('success', 'Task deleted');
+    } catch {
+      showToast('error', 'Failed to delete task');
+    }
   };
 
-  const deleteNote = (noteId: string) => {
-    setUser({ ...user, notes: user.notes?.filter(n => n.id !== noteId) });
-    showToast('success', 'Note deleted');
+  const deleteNote = async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/notes/${noteId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete note');
+      setUser({ ...user, notes: user.notes?.filter((n) => n.id !== noteId) });
+      showToast('success', 'Note deleted');
+    } catch {
+      showToast('error', 'Failed to delete note');
+    }
+  };
+
+  const openEditNote = (note: Note) => {
+    setEditNote({ title: note.title, content: note.content });
+    setEditNoteModal({ open: true, note });
+  };
+
+  const handleEditNote = async () => {
+    if (!editNoteModal.note) return;
+    try {
+      const res = await fetch(`/api/proxy/admin/users/${user.id}/notes/${editNoteModal.note.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editNote),
+      });
+      if (!res.ok) throw new Error('Failed to update note');
+      const json = await res.json();
+      const updated = mapNoteFromApi(json.data?.note ?? json.note);
+      setUser({
+        ...user,
+        notes: user.notes?.map((n) => (n.id === editNoteModal.note!.id ? updated : n)),
+      });
+      setEditNoteModal({ open: false, note: null });
+      showToast('success', 'Note updated');
+    } catch {
+      showToast('error', 'Failed to update note');
+    }
   };
 
   const priorityColors: Record<string, string> = {
@@ -196,21 +276,19 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
                 <InfoItem label="User ID" value={user.id} icon={<IdIcon />} />
                 <InfoItem label="Email" value={user.email} icon={<EmailIcon />} />
                 <InfoItem label="Name" value={user.name} icon={<UserIcon />} />
-                <InfoItem label="Created" value={new Date(user.created_at).toLocaleDateString()} icon={<CalendarIcon />} />
-                <InfoItem label="Last Login" value={user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'} icon={<ClockIcon />} />
-                <InfoItem label="API Calls" value={user.api_calls_count?.toLocaleString() || '0'} icon={<ChartIcon />} />
+                <InfoItem label="Created" value={formatDate(user.created_at)} icon={<CalendarIcon />} />
+                <InfoItem label="Last Login" value={user.last_login ? formatDateTime(user.last_login) : 'Never'} icon={<ClockIcon />} />
+                <InfoItem label="API Calls" value={formatNumber(user.api_calls_count ?? 0)} icon={<ChartIcon />} />
               </div>
             </Card>
 
             <Card hover>
-              <CardTitle>Subscription & Status</CardTitle>
+              <CardTitle>Role & Status</CardTitle>
               <div className="mt-4 space-y-4">
-                <Select
-                  label="Subscription Tier"
-                  value={tier}
-                  onChange={(e) => setTier(e.target.value as typeof tier)}
-                  options={SUBSCRIPTION_TIERS.map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Admin Role</label>
+                  <Toggle checked={isAdmin} onChange={setIsAdmin} label={isAdmin ? 'Admin' : 'Regular User'} />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Account Status</label>
                   <Toggle checked={isActive} onChange={setIsActive} label={isActive ? 'Active' : 'Inactive'} />
@@ -219,7 +297,7 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
                   <Button variant="gradient" onClick={handleSave} loading={saving} disabled={!hasChanges}>
                     Save Changes
                   </Button>
-                  <Button variant="secondary" onClick={() => { setTier(user.subscription_tier); setIsActive(user.is_active); }} disabled={!hasChanges}>
+                  <Button variant="secondary" onClick={() => { setIsAdmin(user.is_admin ?? false); setIsActive(user.is_active); }} disabled={!hasChanges}>
                     Reset
                   </Button>
                 </div>
@@ -236,8 +314,8 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
                   <Badge variant={user.is_active ? 'success' : 'error'} dot>{user.is_active ? 'Active' : 'Inactive'}</Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
-                  <span className="text-gray-600">Tier</span>
-                  <Badge variant="gradient">{user.subscription_tier}</Badge>
+                  <span className="text-gray-600">Role</span>
+                  <Badge variant={user.is_admin ? 'gradient' : 'default'}>{user.is_admin ? 'Admin' : 'User'}</Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
                   <span className="text-gray-600">Tasks</span>
@@ -253,7 +331,7 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
             <Card hover>
               <CardTitle>Actions</CardTitle>
               <div className="mt-4 space-y-3">
-                <Button variant="secondary" className="w-full" onClick={handleResetPassword} loading={resetting}>
+                <Button variant="secondary" className="w-full" onClick={() => setResetModal(true)}>
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
                   Reset Password
                 </Button>
@@ -309,7 +387,7 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
                         </span>
                       </div>
                       {task.description && <p className="text-sm text-gray-500 mt-1">{task.description}</p>}
-                      <p className="text-xs text-gray-400 mt-2">Created {new Date(task.created_at).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-400 mt-2">Created {formatDate(task.created_at)}</p>
                     </div>
                     <button onClick={() => deleteTask(task.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -351,14 +429,21 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
                 <Card key={note.id} hover className="!p-4 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-gray-900">{note.title}</h3>
-                    <button onClick={() => deleteNote(note.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex gap-1">
+                      <button onClick={() => openEditNote(note)} className="p-1 text-gray-400 hover:text-purple-600 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button onClick={() => deleteNote(note.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
-                  <p className="text-xs text-gray-400 mt-3">{new Date(note.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-400 mt-3">{formatDate(note.created_at)}</p>
                 </Card>
               ))}
             </div>
@@ -413,6 +498,43 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
               { value: 'urgent', label: 'Urgent' },
             ]}
           />
+        </div>
+      </Modal>
+
+      <Modal isOpen={resetModal} onClose={() => { setResetModal(false); setNewPassword(''); }} title="Reset Password" footer={
+        <>
+          <Button variant="secondary" onClick={() => { setResetModal(false); setNewPassword(''); }}>Cancel</Button>
+          <Button variant="gradient" onClick={handleResetPassword} loading={resetting} disabled={newPassword.length < 8}>
+            Reset Password
+          </Button>
+        </>
+      }>
+        <Input
+          label="New Password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Minimum 8 characters"
+        />
+      </Modal>
+
+      <Modal isOpen={editNoteModal.open} onClose={() => setEditNoteModal({ open: false, note: null })} title="Edit Note" footer={
+        <>
+          <Button variant="secondary" onClick={() => setEditNoteModal({ open: false, note: null })}>Cancel</Button>
+          <Button variant="gradient" onClick={handleEditNote}>Save</Button>
+        </>
+      }>
+        <div className="space-y-4">
+          <Input label="Title" value={editNote.title} onChange={(e) => setEditNote({ ...editNote, title: e.target.value })} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+            <textarea
+              value={editNote.content}
+              onChange={(e) => setEditNote({ ...editNote, content: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6D28D9]"
+              rows={4}
+            />
+          </div>
         </div>
       </Modal>
 
@@ -476,4 +598,27 @@ function ClockIcon() {
 
 function ChartIcon() {
   return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+}
+
+function mapTaskFromApi(raw: Record<string, unknown>): Task {
+  return {
+    id: String(raw.task_id ?? raw.id),
+    title: String(raw.title ?? ''),
+    description: raw.description as string | undefined,
+    status: (raw.status as Task['status']) ?? 'pending',
+    priority: (raw.priority as Task['priority']) ?? 'medium',
+    created_at: String(raw.created_at ?? new Date().toISOString()),
+    completed_at: raw.completed_at as string | undefined,
+  };
+}
+
+function mapNoteFromApi(raw: Record<string, unknown>): Note {
+  return {
+    id: String(raw.note_id ?? raw.id),
+    title: String(raw.title ?? ''),
+    content: String(raw.content ?? ''),
+    is_pinned: Boolean(raw.is_pinned),
+    created_at: String(raw.created_at ?? new Date().toISOString()),
+    updated_at: String(raw.updated_at ?? raw.created_at ?? new Date().toISOString()),
+  };
 }

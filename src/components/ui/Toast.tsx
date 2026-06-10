@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-slide-in ${bgColors[toast.type]}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-toast-in ${bgColors[toast.type]}`}
           >
             {icons[toast.type]}
             <span className="text-sm text-gray-700">{toast.message}</span>
@@ -86,13 +86,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           </div>
         ))}
       </div>
-      <style jsx global>{`
-        @keyframes slide-in {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in { animation: slide-in 0.3s ease-out; }
-      `}</style>
     </ToastContext.Provider>
   );
 }

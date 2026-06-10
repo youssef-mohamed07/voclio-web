@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/lib/constants';
 import { ApiError } from '@/lib/types';
+import { ApiSuccessResponse } from '@/lib/api-response';
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -14,13 +15,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
     try {
       const data = await response.json();
-      error.message = data.message || data.error || getErrorMessage(response.status);
-      error.errors = data.errors;
+      error.message =
+        data.error?.message || data.message || data.error || getErrorMessage(response.status);
+      error.errors = data.errors || data.error?.details;
     } catch {
       error.message = getErrorMessage(response.status);
     }
 
-    throw error;
+    throw new Error(error.message);
   }
 
   if (response.status === 204) {
@@ -69,6 +71,13 @@ export async function apiFetch<T>(
   });
 
   return handleResponse<T>(response);
+}
+
+export async function apiFetchData<T>(
+  endpoint: string,
+  options: FetchOptions = {}
+): Promise<ApiSuccessResponse<T>> {
+  return apiFetch<ApiSuccessResponse<T>>(endpoint, options);
 }
 
 export function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {

@@ -1,9 +1,11 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { ROUTES } from '@/lib/constants';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE } from '@/lib/auth';
 
-// Simplified auth actions since we're skipping login
 export async function logoutAction(): Promise<void> {
-  redirect(ROUTES.DASHBOARD);
+  const cookieStore = await cookies();
+  cookieStore.delete(AUTH_COOKIE);
+  redirect('/login');
 }
