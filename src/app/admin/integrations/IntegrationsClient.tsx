@@ -291,7 +291,9 @@ function ServiceBadge({ label, ok, hint }: { label: string; ok?: boolean; hint?:
   return (
     <div className="p-3 rounded-xl bg-purple-50">
       <div className="flex items-center gap-2">
-        <Badge variant={ok ? 'success' : 'error'} dot size="sm" />
+        <Badge variant={ok ? 'success' : 'error'} dot size="sm">
+          {ok ? 'OK' : 'Off'}
+        </Badge>
         <span className="text-sm font-medium text-gray-900">{label}</span>
       </div>
       {hint && <p className="text-xs text-gray-500 mt-1 capitalize">{hint}</p>}
