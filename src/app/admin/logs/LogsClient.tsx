@@ -13,6 +13,8 @@ import Badge from '@/components/ui/Badge';
 import Pagination from '@/components/tables/Pagination';
 
 interface LogsClientProps {
+  initialData: PaginatedResponse<Log> | null;
+  initialError: string | null;
   initialFilters: {
     page: number;
     activity_type: string;
@@ -22,12 +24,12 @@ interface LogsClientProps {
   };
 }
 
-export default function LogsClient({ initialFilters }: LogsClientProps) {
+export default function LogsClient({ initialData, initialError, initialFilters }: LogsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const [data, setData] = useState<PaginatedResponse<Log> | null>(null);
+  const [data, setData] = useState<PaginatedResponse<Log> | null>(initialData);
 
   const [activityType, setActivityType] = useState(initialFilters.activity_type);
   const [severity, setSeverity] = useState(initialFilters.severity);

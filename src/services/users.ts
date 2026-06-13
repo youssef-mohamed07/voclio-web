@@ -177,23 +177,12 @@ export async function updateUserStatus(
   id: string,
   is_active: boolean
 ): Promise<User> {
-  const response = await apiFetch<{ user: any }>(`/admin/users/${id}/status`, {
+  const response = await apiFetchData<Record<string, unknown>>(`/admin/users/${id}/status`, {
     token,
     method: 'PUT',
     body: JSON.stringify({ is_active }),
   });
-  
-  const user = response.user;
-  return {
-    id: String(user.user_id),
-    user_id: user.user_id,
-    email: user.email,
-    name: user.name,
-    subscription_tier: 'free' as const,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at || user.created_at,
-  };
+  return mapUser(unwrapData(response));
 }
 
 export async function updateUserRole(
@@ -201,33 +190,10 @@ export async function updateUserRole(
   id: string,
   is_admin: boolean
 ): Promise<User> {
-  const response = await apiFetch<{ user: any }>(`/admin/users/${id}/role`, {
+  const response = await apiFetchData<Record<string, unknown>>(`/admin/users/${id}/role`, {
     token,
     method: 'PUT',
     body: JSON.stringify({ is_admin }),
   });
-  
-  const user = response.user;
-  return {
-    id: String(user.user_id),
-    user_id: user.user_id,
-    email: user.email,
-    name: user.name,
-    subscription_tier: 'free' as const,
-    is_active: user.is_active,
-    is_admin: user.is_admin,
-    created_at: user.created_at,
-    updated_at: user.updated_at || user.created_at,
-  };
-}
-
-export async function bulkDeleteUsers(
-  token: string,
-  userIds: string[]
-): Promise<{ message: string; deleted_count: number }> {
-  return apiFetch(`/admin/users/bulk-delete`, {
-    token,
-    method: 'POST',
-    body: JSON.stringify({ userIds: userIds.map(id => parseInt(id)) }),
-  });
+  return mapUser(unwrapData(response));
 }

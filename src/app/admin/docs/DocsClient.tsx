@@ -124,7 +124,8 @@ export default function DocsClient() {
           {filteredSections.map((section) => {
             const isOpen = openSections.has(section.id);
             return (
-              <Card key={section.id} id={section.id} className="scroll-mt-24 overflow-hidden">
+              <div key={section.id} id={section.id} className="scroll-mt-24">
+              <Card className="overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleSection(section.id)}
@@ -168,6 +169,7 @@ export default function DocsClient() {
                   </div>
                 )}
               </Card>
+              </div>
             );
           })}
         </div>

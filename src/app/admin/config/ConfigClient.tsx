@@ -9,14 +9,17 @@ import Input from '@/components/ui/Input';
 import Toggle from '@/components/ui/Toggle';
 import { useToast } from '@/components/ui/Toast';
 
-interface ConfigClientProps {}
+interface ConfigClientProps {
+  initialData: AppConfig[] | null;
+  initialError: string | null;
+}
 
-export default function ConfigClient({}: ConfigClientProps = {}) {
+export default function ConfigClient({ initialData, initialError }: ConfigClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [configs, setConfigs] = useState<AppConfig[]>([]);
-  const [originalConfigs] = useState<AppConfig[]>([]);
+  const [configs, setConfigs] = useState<AppConfig[]>(initialData ?? []);
+  const [originalConfigs] = useState<AppConfig[]>(initialData ?? []);
   const [saving, setSaving] = useState(false);
 
   const hasChanges = JSON.stringify(configs) !== JSON.stringify(originalConfigs);

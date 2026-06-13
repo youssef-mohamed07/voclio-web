@@ -11,18 +11,24 @@ import Input from '@/components/ui/Input';
 import DataTable from '@/components/tables/DataTable';
 
 interface ApiUsageClientProps {
+  initialData: ApiUsage | null;
+  initialError: string | null;
   initialFilters: {
     start_date: string;
     end_date: string;
   };
 }
 
-export default function ApiUsageClient({ initialFilters }: ApiUsageClientProps) {
+export default function ApiUsageClient({
+  initialData,
+  initialError,
+  initialFilters,
+}: ApiUsageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const [data, setData] = useState<ApiUsage | null>(null);
+  const [data, setData] = useState<ApiUsage | null>(initialData);
   const [startDate, setStartDate] = useState(initialFilters.start_date);
   const [endDate, setEndDate] = useState(initialFilters.end_date);
 
@@ -37,12 +43,16 @@ export default function ApiUsageClient({ initialFilters }: ApiUsageClientProps) 
     });
   };
 
-  const totals = initialData?.totals;
+  const totals = (data ?? initialData)?.totals;
 
   const stats = [
     {
       label: 'AI Operations',
-      value: totals?.total_ai_operations != null ? formatNumber(totals.total_ai_operations) : initialData?.total_requests != null ? formatNumber(initialData.total_requests) : '—',
+      value: totals?.total_ai_operations != null
+        ? formatNumber(totals.total_ai_operations)
+        : (data ?? initialData)?.total_requests != null
+          ? formatNumber((data ?? initialData)!.total_requests)
+          : '—',
       icon: RequestsIcon,
       color: 'bg-purple-100 text-[#6D28D9]',
     },

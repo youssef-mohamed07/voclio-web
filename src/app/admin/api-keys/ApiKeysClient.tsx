@@ -14,15 +14,17 @@ import Modal, { ConfirmModal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 
 interface ApiKeysClientProps {
+  initialData: PaginatedResponse<ApiKey> | null;
+  initialError: string | null;
   currentPage: number;
 }
 
-export default function ApiKeysClient({ currentPage }: ApiKeysClientProps) {
+export default function ApiKeysClient({ initialData, initialError, currentPage }: ApiKeysClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  const [data, setData] = useState<PaginatedResponse<ApiKey> | null>(null);
+  const [data, setData] = useState<PaginatedResponse<ApiKey> | null>(initialData);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState<{ open: boolean; key: ApiKey | null }>({ open: false, key: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; key: ApiKey | null }>({ open: false, key: null });

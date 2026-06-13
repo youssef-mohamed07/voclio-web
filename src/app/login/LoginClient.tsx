@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginAction } from '@/app/actions/auth';
 import { ROUTES } from '@/lib/constants';
 
 export default function LoginClient() {
@@ -18,14 +17,20 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
-      const result = await loginAction(email, password);
-      if (result.success) {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (response.ok && result.success) {
         router.push(ROUTES.DASHBOARD);
         router.refresh();
       } else {
         setError(result.error || 'Login failed');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

@@ -62,6 +62,15 @@ export default function UsersClient({ initialData, initialError, initialFilters 
     });
   };
 
+  const toggleAllUsers = () => {
+    if (!initialData?.data?.length) return;
+    if (selected.size === initialData.data.length) {
+      setSelected(new Set());
+      return;
+    }
+    setSelected(new Set(initialData.data.map((user) => user.id)));
+  };
+
   const handleDelete = async () => {
     if (!deleteModal.user) return;
     setDeleting(true);
@@ -176,12 +185,12 @@ export default function UsersClient({ initialData, initialError, initialFilters 
             <div className="flex items-center gap-3 mb-4">
               <input
                 type="checkbox"
-                checked={selectedUsers.length === initialData.data.length}
+                checked={selected.size === initialData.data.length}
                 onChange={toggleAllUsers}
                 className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
               />
               <span className="text-sm text-gray-600">
-                {selectedUsers.length > 0 ? `${selectedUsers.length} selected` : 'Select all'}
+                {selected.size > 0 ? `${selected.size} selected` : 'Select all'}
               </span>
             </div>
           </Card>
@@ -288,7 +297,7 @@ export default function UsersClient({ initialData, initialError, initialFilters 
         onClose={() => setBulkDeleteModal(false)}
         onConfirm={handleBulkDelete}
         title="Delete Multiple Users"
-        message={`Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${selected.size} users? This action cannot be undone.`}
         loading={deleting}
       />
     </div>

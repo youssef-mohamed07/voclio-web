@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Task, Note } from '@/lib/types';
 import { ROUTES } from '@/lib/constants';
@@ -9,18 +9,17 @@ import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Toggle from '@/components/ui/Toggle';
-import { ConfirmModal } from '@/components/ui/Modal';
+import Modal, { ConfirmModal } from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
-import Spinner from '@/components/ui/Spinner';
-import { getToken } from '@/lib/auth';
-import { getUserDetails, updateUser, deleteUser, resetUserPassword } from '@/services/users';
 
 interface UserDetailsClientProps {
-  userId: string;
+  user: User;
 }
 
-export default function UserDetailsClient({ userId }: UserDetailsClientProps) {
+export default function UserDetailsClient({ user: initialUser }: UserDetailsClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -44,9 +43,6 @@ export default function UserDetailsClient({ userId }: UserDetailsClientProps) {
   const hasChanges = isAdmin !== (user.is_admin ?? false) || isActive !== user.is_active;
 
   const handleSave = async () => {
-    const token = getToken();
-    if (!token) return;
-
     setSaving(true);
     try {
       const res = await fetch(`/api/proxy/admin/users/${user.id}`, {
@@ -94,12 +90,12 @@ export default function UserDetailsClient({ userId }: UserDetailsClientProps) {
   };
 
   const handleDelete = async () => {
-    const token = getToken();
-    if (!token) return;
-
     setDeleting(true);
     try {
-      await deleteUser(token, user.id);
+      const res = await fetch(`/api/proxy/admin/users/${user.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete user');
       showToast('success', 'User deleted successfully');
       router.push(ROUTES.USERS);
     } catch {
@@ -302,7 +298,7 @@ export default function UserDetailsClient({ userId }: UserDetailsClientProps) {
               </div>
               <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
                 <span className="text-gray-600">Recordings</span>
-                <span className="font-semibold text-gray-900">{user.recordings_count || 0}</span>
+                <span className="font-semibold text-gray-900">{user.api_calls_count || user.statistics?.total_recordings || 0}</span>
               </div>
             </div>
           </Card>
