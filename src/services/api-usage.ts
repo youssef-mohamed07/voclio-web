@@ -10,6 +10,11 @@ interface ApiUsageParams {
   endDate?: string;
 }
 
+interface BackendResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 export async function getApiUsage(token: string, params: ApiUsageParams = {}): Promise<ApiUsage> {
   const query = buildQueryString({
     startDate: params.startDate || params.start_date,

@@ -1,6 +1,8 @@
 import { requireAuth } from '@/lib/auth';
 import { getUsers } from '@/services/users';
 import UsersClient from './UsersClient';
+import { PaginatedResponse, User } from '@/lib/types';
+import Spinner from '@/components/ui/Spinner';
 
 interface PageProps {
   searchParams: Promise<{

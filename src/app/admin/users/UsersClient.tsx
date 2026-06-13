@@ -172,6 +172,20 @@ export default function UsersClient({ initialData, initialError, initialFilters 
         <Card className="text-center py-12"><p className="text-red-500">{initialError}</p></Card>
       ) : initialData?.data?.length ? (
         <>
+          <Card hover>
+            <div className="flex items-center gap-3 mb-4">
+              <input
+                type="checkbox"
+                checked={selectedUsers.length === initialData.data.length}
+                onChange={toggleAllUsers}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <span className="text-sm text-gray-600">
+                {selectedUsers.length > 0 ? `${selectedUsers.length} selected` : 'Select all'}
+              </span>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {initialData.data.map((user) => (
               <Card key={user.id} hover className={`!p-0 overflow-hidden ${selected.has(user.id) ? 'ring-2 ring-purple-500' : ''}`}>
@@ -266,6 +280,15 @@ export default function UsersClient({ initialData, initialError, initialFilters 
         onConfirm={handleBulkDelete}
         title="Bulk Delete Users"
         message={`Delete ${selected.size} selected users? This cannot be undone.`}
+        loading={deleting}
+      />
+
+      <ConfirmModal
+        isOpen={bulkDeleteModal}
+        onClose={() => setBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Multiple Users"
+        message={`Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`}
         loading={deleting}
       />
     </div>

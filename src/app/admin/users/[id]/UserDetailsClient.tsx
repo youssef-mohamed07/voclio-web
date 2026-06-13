@@ -1,25 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Task, Note } from '@/lib/types';
 import { ROUTES } from '@/lib/constants';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import Card, { CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import Toggle from '@/components/ui/Toggle';
-import Modal, { ConfirmModal } from '@/components/ui/Modal';
-import Input from '@/components/ui/Input';
+import { ConfirmModal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
+import Spinner from '@/components/ui/Spinner';
+import { getToken } from '@/lib/auth';
+import { getUserDetails, updateUser, deleteUser, resetUserPassword } from '@/services/users';
 
 interface UserDetailsClientProps {
-  user: User;
+  userId: string;
 }
 
-export default function UserDetailsClient({ user: initialUser }: UserDetailsClientProps) {
+export default function UserDetailsClient({ userId }: UserDetailsClientProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -43,6 +44,9 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
   const hasChanges = isAdmin !== (user.is_admin ?? false) || isActive !== user.is_active;
 
   const handleSave = async () => {
+    const token = getToken();
+    if (!token) return;
+
     setSaving(true);
     try {
       const res = await fetch(`/api/proxy/admin/users/${user.id}`, {
@@ -90,10 +94,12 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
   };
 
   const handleDelete = async () => {
+    const token = getToken();
+    if (!token) return;
+
     setDeleting(true);
     try {
-      const res = await fetch(`/api/proxy/admin/users/${user.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete user');
+      await deleteUser(token, user.id);
       showToast('success', 'User deleted successfully');
       router.push(ROUTES.USERS);
     } catch {
@@ -246,24 +252,75 @@ export default function UserDetailsClient({ user: initialUser }: UserDetailsClie
         </Badge>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        {(['overview', 'tasks', 'notes'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-3 text-sm font-medium transition-colors relative ${
-              activeTab === tab ? 'text-[#6D28D9]' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {tab === 'tasks' && user.tasks?.length ? ` (${user.tasks.length})` : ''}
-            {tab === 'notes' && user.notes?.length ? ` (${user.notes.length})` : ''}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6]" />
-            )}
-          </button>
-        ))}
+      {/* User Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card hover>
+            <CardTitle>User Information</CardTitle>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <InfoItem label="User ID" value={user.id} icon={<IdIcon />} />
+              <InfoItem label="Email" value={user.email} icon={<EmailIcon />} />
+              <InfoItem label="Name" value={user.name} icon={<UserIcon />} />
+              <InfoItem label="Created" value={new Date(user.created_at).toLocaleDateString()} icon={<CalendarIcon />} />
+            </div>
+          </Card>
+
+          <Card hover>
+            <CardTitle>Account Status</CardTitle>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <Toggle checked={isActive} onChange={setIsActive} label={isActive ? 'Active' : 'Inactive'} />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="gradient" onClick={handleSave} loading={saving} disabled={!hasChanges}>
+                  Save Changes
+                </Button>
+                <Button variant="secondary" onClick={() => setIsActive(user.is_active)} disabled={!hasChanges}>
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card hover>
+            <CardTitle>Quick Stats</CardTitle>
+            <div className="mt-4 space-y-4">
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                <span className="text-gray-600">Status</span>
+                <Badge variant={user.is_active ? 'success' : 'error'} dot>{user.is_active ? 'Active' : 'Inactive'}</Badge>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                <span className="text-gray-600">Notes</span>
+                <span className="font-semibold text-gray-900">{user.notes_count || 0}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                <span className="text-gray-600">Tasks</span>
+                <span className="font-semibold text-gray-900">{user.tasks_count || 0}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                <span className="text-gray-600">Recordings</span>
+                <span className="font-semibold text-gray-900">{user.recordings_count || 0}</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card hover>
+            <CardTitle>Actions</CardTitle>
+            <div className="mt-4 space-y-3">
+              <Button variant="secondary" className="w-full" onClick={handleResetPassword} loading={resetting}>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                Reset Password
+              </Button>
+              <Button variant="danger" className="w-full" onClick={() => setDeleteModal(true)}>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Delete User
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Overview Tab */}

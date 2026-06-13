@@ -38,7 +38,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
       initialData={logsData}
       initialError={error}
       initialFilters={{
-        page,
+        page: parseInt(params.page || '1', 10),
         activity_type: params.activity_type || '',
         severity: params.severity || '',
         start_date: params.start_date || '',

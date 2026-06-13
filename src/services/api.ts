@@ -6,6 +6,17 @@ interface FetchOptions extends RequestInit {
   token?: string;
 }
 
+interface BackendResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details: any;
+  };
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const error: ApiError = {
@@ -29,7 +40,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return {} as T;
   }
 
-  return response.json();
+  const json: BackendResponse<T> = await response.json();
+  
+  // If backend wraps response in { success, data }, return the whole response
+  // The service layer will handle extracting what it needs
+  if (json.success !== undefined) {
+    return json as unknown as T;
+  }
+  
+  // Otherwise return as is
+  return json as unknown as T;
 }
 
 function getErrorMessage(status: number): string {
@@ -64,7 +84,9 @@ export async function apiFetch<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const response = await fetch(url, {
     ...fetchOptions,
     headers,
     cache: fetchOptions.cache || 'no-store',

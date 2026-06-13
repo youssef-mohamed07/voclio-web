@@ -11,19 +11,18 @@ import Input from '@/components/ui/Input';
 import DataTable from '@/components/tables/DataTable';
 
 interface ApiUsageClientProps {
-  initialData: ApiUsage | null;
-  initialError: string | null;
   initialFilters: {
     start_date: string;
     end_date: string;
   };
 }
 
-export default function ApiUsageClient({ initialData, initialError, initialFilters }: ApiUsageClientProps) {
+export default function ApiUsageClient({ initialFilters }: ApiUsageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  const [data, setData] = useState<ApiUsage | null>(null);
   const [startDate, setStartDate] = useState(initialFilters.start_date);
   const [endDate, setEndDate] = useState(initialFilters.end_date);
 
@@ -103,12 +102,12 @@ export default function ApiUsageClient({ initialData, initialError, initialFilte
           </div>
         </div>
 
-        {initialError ? (
-          <div className="p-8 text-center text-red-500">{initialError}</div>
+        {!data ? (
+          <div className="p-8 text-center text-gray-500">Loading usage data...</div>
         ) : (
           <DataTable
             columns={columns}
-            data={initialData?.breakdown || []}
+            data={data?.breakdown || []}
             keyExtractor={(item) => `${item.api_type}-${item.date}`}
             emptyMessage="No usage data available"
           />

@@ -3,6 +3,11 @@ import { unwrapData } from '@/lib/api-response';
 import { mapConfigItem } from '@/lib/mappers';
 import { AppConfig } from '@/lib/types';
 
+interface BackendResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 export async function getConfig(token: string): Promise<AppConfig[]> {
   const response = await apiFetchData<{
     items?: Record<string, unknown>[];

@@ -16,6 +16,11 @@ interface LogsParams {
   endDate?: string;
 }
 
+interface BackendResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 export async function getLogs(token: string, params: LogsParams = {}): Promise<PaginatedResponse<Log>> {
   const query = buildQueryString({
     page: params.page || 1,
