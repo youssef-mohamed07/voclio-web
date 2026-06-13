@@ -415,7 +415,7 @@ export const ADMIN_DOC_SECTIONS: DocSection[] = [
       {
         name: 'Google Calendar',
         description:
-          'Requires google_calendar_enabled flag and Google OAuth credentials on the backend. Users connect via OAuth deep link (voclio://oauth/callback).',
+          'Requires google_calendar_enabled flag and Google OAuth credentials on the backend. Mobile OAuth uses the HTTPS backend callback, then redirects to voclio://oauth/callback in the app.',
       },
       {
         name: 'AI Suggestions',
