@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import VoclioLogo from '@/components/brand/VoclioLogo';
 import { ROUTES } from '@/lib/constants';
 
 interface SidebarProps {
@@ -40,11 +41,7 @@ export default function Sidebar({ isOpen, onClose, labels }: SidebarProps) {
       >
         <div className="flex items-center justify-between h-20 px-6 border-b border-purple-100">
           <Link href={ROUTES.DASHBOARD} className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
+            <VoclioLogo size={40} className="rounded-xl shadow-md shrink-0" />
             <div>
               <span className="font-bold text-xl gradient-text">Voclio</span>
               <p className="text-xs text-gray-500">Admin Panel</p>

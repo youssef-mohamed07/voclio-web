@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import VoclioLogo from '@/components/brand/VoclioLogo';
 import { AdminProfile } from '@/lib/types';
+import { ROUTES } from '@/lib/constants';
 import Button from '@/components/ui/Button';
 
 interface HeaderProps {
@@ -40,6 +43,9 @@ export default function Header({ onMenuClick, profile }: HeaderProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        <Link href={ROUTES.DASHBOARD} className="lg:hidden">
+          <VoclioLogo size={36} className="rounded-lg" />
+        </Link>
         <div className="hidden md:block">
           <h1 className="text-xl font-bold text-gray-900">
             Welcome back{adminName !== 'Admin User' ? `, ${adminName.split(' ')[0]}` : ''}!

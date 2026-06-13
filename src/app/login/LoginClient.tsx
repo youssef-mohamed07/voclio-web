@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import VoclioLogo from '@/components/brand/VoclioLogo';
 import { ROUTES } from '@/lib/constants';
 
 export default function LoginClient() {
@@ -43,13 +44,7 @@ export default function LoginClient() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] rounded-2xl flex items-center justify-center shadow-lg">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-            </div>
+            <VoclioLogo size={80} priority className="rounded-2xl shadow-lg" />
           </div>
 
           {/* Title */}

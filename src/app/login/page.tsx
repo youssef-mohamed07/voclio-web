@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import VoclioLogo from '@/components/brand/VoclioLogo';
 import { ROUTES } from '@/lib/constants';
 
 export default function LoginPage() {
@@ -45,9 +46,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-purple-100 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#6D28D9] to-[#8B5CF6] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
-            <span className="text-2xl font-bold text-white">V</span>
-          </div>
+          <VoclioLogo
+            size={80}
+            priority
+            className="mx-auto mb-4 rounded-2xl shadow-lg shadow-purple-500/20"
+          />
           <h1 className="text-2xl font-bold text-gray-900">Voclio Admin</h1>
           <p className="text-gray-500 mt-1">Sign in to access the dashboard</p>
         </div>

@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Voclio Admin Dashboard',
   description: 'Powerful admin dashboard for managing your platform',
+  icons: {
+    icon: '/voclio-logo.png',
+    apple: '/voclio-logo.png',
+  },
 };
 
 export default function RootLayout({
