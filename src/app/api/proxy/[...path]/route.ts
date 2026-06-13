@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from '@/lib/auth';
+import { getToken, AUTH_COOKIE } from '@/lib/auth';
 import { API_BASE_URL } from '@/lib/constants';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -53,7 +53,19 @@ async function proxyRequest(request: NextRequest, params: { path: string[] }) {
     const response = await fetch(url, fetchOptions);
     const data = await response.json().catch(() => ({}));
 
-    return NextResponse.json(data, { status: response.status });
+    const res = NextResponse.json(data, { status: response.status });
+
+    if (response.status === 401) {
+      res.cookies.set(AUTH_COOKIE, '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+        path: '/',
+      });
+    }
+
+    return res;
   } catch (error) {
     console.error('Proxy error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

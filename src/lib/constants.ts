@@ -18,7 +18,10 @@ export const ROUTES = {
   LOGS: '/admin/logs',
   CONFIG: '/admin/config',
   ANALYTICS: '/admin/analytics',
+  INTEGRATIONS: '/admin/integrations',
   SYSTEM: '/admin/system',
+  DOCS: '/admin/docs',
+  API_EXPLORER: '/admin/api-explorer',
 } as const;
 
 export const USER_STATUS_FILTERS = [

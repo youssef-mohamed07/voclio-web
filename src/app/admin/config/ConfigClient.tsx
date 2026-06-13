@@ -123,28 +123,80 @@ export default function ConfigClient({ initialData, initialError }: ConfigClient
         </div>
       </div>
 
-      <Card>
-        <CardTitle>Application Settings</CardTitle>
-        <CardDescription>Configure system-wide settings for your application</CardDescription>
+      {Array.from(groupConfigs(configs).entries()).map(([groupId, items]) => (
+        <Card key={groupId}>
+          <CardTitle>{CONFIG_GROUPS[groupId]?.title ?? 'Other Settings'}</CardTitle>
+          {groupId === 'features' && (
+            <CardDescription className="mt-1">
+              Control mobile features and third-party integrations
+            </CardDescription>
+          )}
 
-        <div className="mt-6 divide-y divide-gray-100">
-          {configs.map((config) => (
-            <div key={config.key} className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{formatConfigKey(config.key)}</p>
-                <p className="text-sm text-gray-500 mt-1">{config.description}</p>
+          <div className="mt-6 divide-y divide-gray-100">
+            {items.map((config) => (
+              <div key={config.key} className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{formatConfigKey(config.key)}</p>
+                  <p className="text-sm text-gray-500 mt-1">{config.description}</p>
+                </div>
+                <div className="sm:ml-4">{renderConfigInput(config)}</div>
               </div>
-              <div className="sm:ml-4">{renderConfigInput(config)}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
+      ))}
 
-        {configs.length === 0 && (
+      {configs.length === 0 && (
+        <Card>
           <div className="text-center text-gray-500 py-8">No configuration options available</div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
+}
+
+const CONFIG_GROUPS: Record<string, { title: string; keys: string[] }> = {
+  general: {
+    title: 'General',
+    keys: ['app_name', 'default_language', 'support_email', 'allow_signups', 'maintenance_mode'],
+  },
+  features: {
+    title: 'Features & Integrations',
+    keys: [
+      'focus_mode_enabled',
+      'voice_recording_enabled',
+      'google_calendar_enabled',
+      'home_widgets_enabled',
+      'ai_suggestions_enabled',
+      'webex_integration_enabled',
+      'onboarding_enabled',
+    ],
+  },
+  limits: {
+    title: 'Security & Limits',
+    keys: [
+      'rate_limit_enabled',
+      'max_requests_per_minute',
+      'session_timeout_minutes',
+      'max_upload_size',
+    ],
+  },
+};
+
+function groupConfigs(configs: AppConfig[]) {
+  const grouped = new Map<string, AppConfig[]>();
+  const used = new Set<string>();
+
+  Object.entries(CONFIG_GROUPS).forEach(([id, group]) => {
+    const items = configs.filter((c) => group.keys.includes(c.key));
+    if (items.length) grouped.set(id, items);
+    items.forEach((c) => used.add(c.key));
+  });
+
+  const other = configs.filter((c) => !used.has(c.key));
+  if (other.length) grouped.set('other', other);
+
+  return grouped;
 }
 
 function formatConfigKey(key: string): string {

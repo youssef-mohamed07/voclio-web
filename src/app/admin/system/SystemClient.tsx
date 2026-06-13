@@ -101,6 +101,22 @@ export default function SystemClient({ health, initialError }: SystemClientProps
         </Card>
       </div>
 
+      {health?.services && (
+        <Card hover>
+          <CardTitle>Connected Services</CardTitle>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <ServiceStatus label="Redis" ok={health.services.redis.connected} detail={health.services.redis.enabled ? 'enabled' : 'disabled'} />
+            <ServiceStatus label="Email" ok={health.services.email.configured} detail={health.services.email.provider} />
+            <ServiceStatus label="Storage" ok={health.services.storage.configured} detail={health.services.storage.provider} />
+            <ServiceStatus label="Gemini AI" ok={health.services.ai.gemini} />
+            <ServiceStatus label="OpenRouter" ok={health.services.ai.openrouter} />
+            <ServiceStatus label="AssemblyAI" ok={health.services.ai.assemblyai} />
+            <ServiceStatus label="Google OAuth" ok={health.services.oauth.google} />
+            <ServiceStatus label="Webex OAuth" ok={health.services.oauth.webex} />
+          </div>
+        </Card>
+      )}
+
       {health?.memory_usage && (
         <Card hover>
           <CardTitle>Memory Usage</CardTitle>
@@ -143,6 +159,18 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="p-3 bg-purple-50 rounded-xl">
       <p className="text-xs text-gray-500">{label}</p>
       <p className="text-lg font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function ServiceStatus({ label, ok, detail }: { label: string; ok?: boolean; detail?: string }) {
+  return (
+    <div className="p-3 bg-gray-50 rounded-xl">
+      <div className="flex items-center gap-2">
+        <Badge variant={ok ? 'success' : 'error'} dot size="sm" />
+        <span className="text-sm font-medium text-gray-900">{label}</span>
+      </div>
+      {detail && <p className="text-xs text-gray-500 mt-1 capitalize">{detail}</p>}
     </div>
   );
 }

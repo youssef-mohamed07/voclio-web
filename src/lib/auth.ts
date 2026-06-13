@@ -25,20 +25,52 @@ async function loginWithCredentials(email: string, password: string): Promise<st
   return json.data.tokens.access_token;
 }
 
+async function validateAdminToken(token: string): Promise<boolean> {
+  if (!token.trim()) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function clearAuthCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(AUTH_COOKIE);
+  cachedToken = null;
+}
+
 export async function getToken(): Promise<string> {
   if (process.env.ADMIN_ACCESS_TOKEN) {
-    return process.env.ADMIN_ACCESS_TOKEN;
+    const envToken = process.env.ADMIN_ACCESS_TOKEN;
+    if (await validateAdminToken(envToken)) {
+      return envToken;
+    }
+    throw new Error('ADMIN_ACCESS_TOKEN is invalid or expired');
   }
 
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(AUTH_COOKIE)?.value;
-  if (cookieToken) {
+  if (cookieToken && (await validateAdminToken(cookieToken))) {
     return cookieToken;
   }
 
-  if (cachedToken) {
+  if (cookieToken) {
+    await clearAuthCookie();
+  }
+
+  if (cachedToken && (await validateAdminToken(cachedToken))) {
     return cachedToken;
   }
+
+  cachedToken = null;
 
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;

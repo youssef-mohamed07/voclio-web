@@ -100,21 +100,30 @@ export default function DashboardClient({
           gradient="green"
         />
         <StatCard
-          title="Total Users"
-          value={formatNumber(stats?.total_users.value ?? 0)}
-          change={formatChange(stats?.total_users.change_percent ?? 0).text}
-          changeType={formatChange(stats?.total_users.change_percent ?? 0).type}
-          icon={<UsersIcon className="w-6 h-6" />}
+          title="Voice Recordings"
+          value={formatNumber(stats?.voice_recordings?.value ?? 0)}
+          change={formatChange(stats?.voice_recordings?.change_percent ?? 0).text}
+          changeType={formatChange(stats?.voice_recordings?.change_percent ?? 0).type}
+          icon={<MicIcon className="w-6 h-6" />}
           gradient="blue"
         />
         <StatCard
-          title="Total Tasks"
-          value={formatNumber(stats?.total_tasks.value ?? 0)}
-          change={formatChange(stats?.total_tasks.change_percent ?? 0).text}
-          changeType={formatChange(stats?.total_tasks.change_percent ?? 0).type}
-          icon={<ErrorsIcon className="w-6 h-6" />}
+          title="Calendar Syncs"
+          value={formatNumber(stats?.calendar_connections?.value ?? 0)}
+          change={`${formatNumber(stats?.oauth_integrations?.value ?? 0)} OAuth users`}
+          changeType="neutral"
+          icon={<CalendarIcon className="w-6 h-6" />}
           gradient="red"
         />
+      </div>
+
+      <div className="flex justify-end">
+        <Link
+          href={ROUTES.INTEGRATIONS}
+          className="text-sm text-[#6D28D9] hover:text-[#5B21B6] font-medium"
+        >
+          Manage integrations & feature flags →
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -297,6 +306,22 @@ function ErrorsIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  );
+}
+
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   );
 }

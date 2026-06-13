@@ -152,6 +152,9 @@ export interface DashboardStats {
   total_tasks: { value: number; change_percent: number };
   api_requests: { value: number; change_percent: number };
   content_this_month: { value: number; change_percent: number };
+  voice_recordings?: { value: number; change_percent: number };
+  calendar_connections?: { value: number; change_percent: number };
+  oauth_integrations?: { value: number; change_percent: number };
 }
 
 export interface UsageChart {
@@ -179,6 +182,49 @@ export interface SystemHealth {
   active_sessions: number;
   unread_notifications: number;
   timestamp: string;
+  services?: {
+    database?: string;
+    redis: { enabled: boolean; connected: boolean; healthy?: boolean; host: string | null };
+    storage: { provider: string; configured: boolean; bucket: string };
+    email: { provider: string; configured: boolean };
+    ai: { gemini: boolean; openrouter: boolean; assemblyai: boolean };
+    oauth: { google: boolean; facebook: boolean; webex: boolean };
+  };
+}
+
+export interface IntegrationsOverview {
+  oauth: {
+    total: number;
+    google: number;
+    facebook: number;
+    webex: number;
+    email_signup: number;
+    total_users: number;
+  };
+  voice: { total_recordings: number; transcriptions_this_week: number };
+  focus: { total_sessions: number; total_minutes: number };
+  calendar: {
+    total_connections: number;
+    active_syncs: number;
+    error_syncs: number;
+    synced_this_week: number;
+  };
+  feature_flags: Record<string, { value: boolean; description: string | null; updated_at: string | null }>;
+  services: SystemHealth['services'];
+}
+
+export interface CalendarSyncRow {
+  sync_id: number;
+  user_id: number;
+  user_email: string | null;
+  user_name: string | null;
+  calendar_id: string;
+  calendar_name: string | null;
+  sync_enabled: boolean;
+  sync_status: string;
+  last_sync_at: string | null;
+  error_message: string | null;
+  updated_at: string;
 }
 
 export interface SystemAnalytics {
