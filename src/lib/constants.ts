@@ -20,6 +20,7 @@ export const ROUTES = {
   SYSTEM: '/admin/system',
   CONFIG: '/admin/config',
   INTEGRATIONS: '/admin/integrations',
+  NOTIFICATIONS: '/admin/notifications',
   DOCS: '/admin/docs',
   API_EXPLORER: '/admin/api-explorer',
 } as const;

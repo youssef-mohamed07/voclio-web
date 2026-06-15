@@ -19,6 +19,7 @@ const NAV_KEYS = [
   { href: ROUTES.API_KEYS, key: 'nav.api_keys', label: 'API Keys', icon: KeyIcon },
   { href: ROUTES.LOGS, key: 'nav.logs', label: 'Activity Logs', icon: LogsIcon },
   { href: ROUTES.INTEGRATIONS, key: 'nav.integrations', label: 'Integrations', icon: IntegrationsIcon },
+  { href: ROUTES.NOTIFICATIONS, key: 'nav.notifications', label: 'Notifications', icon: NotificationsIcon },
   { href: ROUTES.SYSTEM, key: 'nav.system', label: 'System', icon: SystemIcon },
   { href: ROUTES.CONFIG, key: 'nav.settings', label: 'Configuration', icon: ConfigIcon },
   { href: ROUTES.API_EXPLORER, key: 'nav.api_explorer', label: 'API Explorer', icon: ApiExplorerIcon },
@@ -143,6 +144,14 @@ function IntegrationsIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+    </svg>
+  );
+}
+
+function NotificationsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   );
 }

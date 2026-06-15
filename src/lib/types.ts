@@ -211,7 +211,68 @@ export interface IntegrationsOverview {
     synced_this_week: number;
   };
   feature_flags: Record<string, { value: boolean; description: string | null; updated_at: string | null }>;
-  services: SystemHealth['services'];
+  services: SystemHealth['services'] & {
+    push?: { configured: boolean; provider: string };
+  };
+}
+
+export interface PushNotificationStats {
+  push_configured: boolean;
+  device_tokens: number;
+  users_with_tokens: number;
+  active_users: number;
+}
+
+export interface NotificationRecipient {
+  user_id: number;
+  email: string;
+  name: string | null;
+  is_active: boolean;
+  device_tokens: number;
+  platforms: string[];
+}
+
+export interface PushNotificationSendResult {
+  recipients: number;
+  notifications_created: number;
+  push_sent: number;
+  push_failed: number;
+  results: Array<Record<string, unknown>>;
+}
+
+export interface NotificationTemplate {
+  key: string;
+  category: 'engagement' | 'reminder' | 'task';
+  label: string;
+  suggestedRecurrence: 'once' | 'daily' | 'weekly';
+  suggestedTime?: string;
+  notificationType: string;
+  priority: string;
+  audience: string;
+  preview: {
+    title: string;
+    message: string;
+  };
+}
+
+export interface ScheduledNotificationCampaign {
+  scheduled_notification_id: number;
+  name: string;
+  template_key: string | null;
+  title: string | null;
+  message: string | null;
+  notification_type: string;
+  priority: string;
+  audience: string;
+  target_user_id: number | null;
+  recurrence: 'once' | 'daily' | 'weekly';
+  scheduled_at: string;
+  next_run_at: string;
+  last_run_at: string | null;
+  is_active: boolean;
+  send_push: boolean;
+  run_count: number;
+  created_at: string;
 }
 
 export interface CalendarSyncRow {
